@@ -1,0 +1,64 @@
+NameSite: cookiecms
+securecode: c8ENvF5zD5ThuM9mTwofBqMLGSEutUrztAeca3LFLKr3v9RRXeUnO7j7nskWbL2y
+ServiceApiToken: 2aiajDNUhW95HlSHcRDJK0psCBBGazwGWbnZi99Vcirb82SIEeNvxqKmqAJlwxuQ
+MaxSavedSkins: 1
+DEBUGLOG: 0 # 0 none, 1 requests, 2 full request with all
+debugToken: 64c82dcb-c29d-4ff8-b6e6-b796a2672a1
+
+# Duplicating audit from site to discord 
+AuditSecret: 
+  url: https://
+  spamming: id # here will be send created account
+  audit: id # main information change password change mail etc
+
+
+database:
+  host: "localhost"
+  username: "cookiecms"
+  pass: "cookiecms"
+  db: "cookiecms"
+  port: 34002
+
+smtp:
+  host: "smtppro.zoho.eu"
+  SMTPAuth: true
+  Username: "noreply@coffeedev.dev"
+  Password: "r%nytuD2"
+  SMTPSecure: ""
+  Port: 587
+
+discord:
+  enabled: true
+  client_id: "1181148727826722816"
+  secret_id: "5YaScJyKq0pDQxO_B5YlhUwcBnlkr37P"
+  scopes: "identify+email"
+  redirect_url: "http://localhost:34000/api/auth/discord"
+  bot: ""
+  guild_id: 0
+  role: 0
+  webhooks: ""
+
+
+# Not realised
+permissions:
+  0:
+    - page.userlist
+  1:
+    - profile.changeusername
+    - profile.changeskin
+    - profile.changemail
+    - profile.changepassword
+    - profile.discord
+  2:
+    - profile.changeskinHD
+  3:
+    - admin.userslist
+    - admin.useredit
+    - admin.mailsend
+
+
+servers:
+  name:
+    name:
+    ip:
+    port:

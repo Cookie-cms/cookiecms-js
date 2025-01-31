@@ -1,0 +1,41 @@
+const express = require('express');
+const app = express();
+const routes = require('./routes/index');
+const logger = require('./logger');
+
+const mysql = require('./inc/mysql');
+
+mysql.getConnection((err, connection) => {
+    if (err) {
+        logger.error('Error connecting to MySQL:', err);
+    } else {
+        logger.info('MySQL connection established successfully');
+        connection.release();
+    }
+});
+
+
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.use((req, res, next) => {
+    res.on('finish', () => {
+      let { ip, method, originalUrl, httpVersion } = req;
+      const status = res.statusCode;
+      const statusMessage = res.statusMessage || getDefaultStatusMessage(status);
+  
+      ip = ip.replace(/^::ffff:/, '');
+  
+      const logMessage = `${ip} - "${method} ${originalUrl} HTTP/${httpVersion}" ${status} ${statusMessage}`;
+      logger.info(logMessage);
+    });
+    next();
+  });
+
+app.use('/api', routes);
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    logger.info(`Server is running on port http://localhost:${PORT}`);
+});

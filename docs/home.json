@@ -1,0 +1,17 @@
+{
+    "Username": "Coffee",
+    "Uuid": "00000000-0000-0000-0000-000000000000",
+    "Selected_Cape": 0,
+    "Capes":[
+        {
+            "Id": 0,
+            "Name": "youtube"
+        }
+    ],
+    "Discord_integration": true,
+    "Discord": {
+        "Discord_Global_Name": "",
+        "Discord_Ava": ""
+    },
+    "Mail_verification": true
+}

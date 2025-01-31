@@ -1,0 +1,22 @@
+{
+  "name": "my-express-app",
+  "version": "1.0.0",
+  "description": "A simple Express.js application",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js"
+  },
+  "dependencies": {
+    "discord-oauth2-api": "^1.1.2",
+    "express": "latest",
+    "js-yaml": "^4.1.0",
+    "mysql": "^2.18.1",
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "nodemon": "latest"
+  },
+  "author": "",
+  "license": "ISC"
+}
