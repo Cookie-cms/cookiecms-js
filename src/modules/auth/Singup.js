@@ -1,8 +1,6 @@
-const express = require('express');
-const router = express.Router();
-const bcrypt = require('bcrypt');
-const mysql = require('../../inc/mysql');
-const { v4: uuidv4 } = require('uuid');
+import pool from '../../inc/mysql.js';
+import bcrypt from 'bcrypt';
+import { v4 as uuidv4 } from 'uuid';
 
 function validate(data) {
     data = data.trim();
@@ -10,7 +8,7 @@ function validate(data) {
     return data;
 }
 
-async function signup(req, res) {
+export async function signup(req, res) {
     const { mail, password } = req.body;
 
     if (!mail || !password) {
@@ -29,7 +27,7 @@ async function signup(req, res) {
     }
 
     try {
-        const connection = await mysql.getConnection();
+        const connection = await pool.getConnection();
 
         const [existingUser] = await connection.query("SELECT * FROM users WHERE BINARY mail = ?", [validatedMail]);
 
@@ -38,7 +36,8 @@ async function signup(req, res) {
             return res.status(409).json({ error: true, msg: "Email is already registered." });
         }
 
-        const userID = uuidv4();
+        const userID =  Math.floor(Math.random() * (999999999999999999 - 1 + 1)) + 1;
+       
         const hashedPassword = await bcrypt.hash(validatedPassword, 10);
 
         await connection.query("INSERT INTO users (id, mail, password) VALUES (?, ?, ?)", [userID, validatedMail, hashedPassword]);
@@ -60,6 +59,6 @@ async function signup(req, res) {
         console.error("[ERROR] MySQL Error: ", err);
         return res.status(500).json({ error: true, msg: "An error occurred during registration. Please try again later." });
     }
-};
+}
 
-module.exports = router;
+export default signup;

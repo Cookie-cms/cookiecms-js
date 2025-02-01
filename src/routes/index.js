@@ -1,27 +1,19 @@
-const express = require('express');
+import express from 'express';
+import auth from '../modules/auth/index.js';
+
 const router = express.Router();
 
+router.post('/auth/login', auth.login);
+
+router.post('/auth/confirm', auth.confirmMail);
+
+router.post('/auth/logout', auth.logout);
+
+router.post('/auth/register', auth.signup);
+
+router.post('/auth/registerfinish', auth.finishRegister);
 
 
-router.get('/', (req, res) => {
-    res.send('Welcome to the Express app!');
-});
-
-router.post('/auth/login', (req, res) => {
-    res.send('Welcome to the Express app!');
-});
-
-router.post('/auth/register', (req, res) => {
-    res.send('Welcome to the Express app!');
-});
-
-router.post('/auth/confirm', (req, res) => {
-    res.send('Welcome to the Express app!');
-});
-
-router.post('/auth/logout', (req, res) => {
-    res.send('Welcome to the Express app!');
-});
 
 router.get('/home', (req, res) => {
     res.send('Welcome to the Express app!');
@@ -61,4 +53,4 @@ router.get('/cape/{uuid}', (req, res) => {
 
 
 
-module.exports = router;
+export default router;

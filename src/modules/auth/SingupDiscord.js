@@ -1,7 +1,7 @@
-const express = require('express');
-const Client = require('discord-oauth2-api');
-const mysql = require('../../inc/mysql');
-const readConfig = require('../../inc/yamlReader');
+import express from 'express';
+import Client from 'discord-oauth2-api';
+import mysql from '../../inc/mysql.js';
+import readConfig from '../../inc/yamlReader.js';
 
 const config = readConfig(process.env.CONFIG_PATH || '../config.yml');
 const discordClient = new Client({
@@ -45,7 +45,7 @@ async function registerDiscord(user) {
     return { error: false, msg: "Registration successful. Please proceed to registration.", url: "/home" };
 }
 
-async function signupDiscord(req, res) {
+async function SingupDiscord(req, res) {
     const { code } = req.body;
 
     if (!code) {
@@ -68,4 +68,4 @@ async function signupDiscord(req, res) {
     }
 }
 
-module.exports = signupDiscord;
+export default SingupDiscord;

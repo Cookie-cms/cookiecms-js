@@ -1,12 +1,12 @@
-const express = require('express');
-const router = express.Router();
-const mysql = require('../../inc/mysql');
-const readConfig = require('../../inc/yamlReader');
+import mysql from '../../inc/mysql.js';
+import readConfig from '../../inc/yamlReader.js';
+// import logger from './../logger.js';
+
 
 const config = readConfig(process.env.CONFIG_PATH || '../config.yml');
 const JWT_SECRET_KEY = config.securecode;
 
-async function confirmMail(req, res) {
+async function ConfirmMail(req, res) {
     const { code } = req.body;
 
     if (!code) {
@@ -53,4 +53,4 @@ async function confirmMail(req, res) {
 };
 
 
-module.exports = router;
+export default ConfirmMail;

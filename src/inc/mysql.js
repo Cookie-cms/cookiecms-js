@@ -1,13 +1,17 @@
-const mysql = require('mysql');
-const readConfig = require('./yamlReader');
-const config = readConfig('../config.yml');
+import mysql from 'mysql2/promise';
+import readConfig from './yamlReader.js';
+
+const config = readConfig(process.env.CONFIG_PATH || '../config.yml');
 
 const pool = mysql.createPool({
     host: config.database.host,
     user: config.database.username,
     password: config.database.pass,
     database: config.database.db,
-    port: config.database.port
+    port: config.database.port,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
 });
 
-module.exports = pool;
+export default pool;

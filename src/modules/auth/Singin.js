@@ -1,48 +1,88 @@
-const express = require('express');
-const jwt = require('jsonwebtoken');
-const mysql = require('../../inc/mysql');
-const readConfig = require('../../inc/yamlReader');
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import mysql from '../../inc/mysql.js';
+import readConfig from '../../inc/yamlReader.js';
 
-const config = readConfig(process.env.CONFIG_PATH || '../config.yml');
+const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
 
-async function loginDiscord(mail) {
-    const connection = await mysql.getConnection();
+function validate(data) {
+    data = data.trim();
+    data = data.replace(/<[^>]*>?/gm, '');
+    return data;
+}
 
-    const [user] = await connection.query("SELECT * FROM users WHERE BINARY mail = ?", [mail]);
+function isEmail(input) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input);
+}
 
-    if (!user.length) {
-        connection.release();
-        return { error: true, msg: 'User not found' };
+async function login(req, res) {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+        return res.status(400).json({ error: true, msg: 'Username or password not provided' });
     }
 
-    if (user[0].mail_verify === 0) {
-        connection.release();
-        return { error: true, msg: 'Please verify your mail' };
-    }
-
-    const payload = {
-        iss: config.NameSite,
-        sub: user[0].id,
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + 3600,
-    };
+    const validatedUsername = validate(username);
+    const validatedPassword = validate(password);
 
     try {
-        const token = jwt.sign(payload, JWT_SECRET_KEY, { algorithm: 'HS256' });
+        const connection = await mysql.getConnection();
 
-        connection.release();
-        return {
-            error: false,
-            msg: 'Login successful',
-            url: '/home',
-            data: { jwt: token }
-        };
+        let query;
+        let params;
+        if (isEmail(validatedUsername)) {
+            query = "SELECT * FROM users WHERE BINARY mail = ?";
+            params = [validatedUsername];
+        } else {
+            query = "SELECT * FROM users WHERE BINARY username = ?";
+            params = [validatedUsername];
+        }
+
+        const [user] = await connection.query(query, params);
+
+        if (!user.length) {
+            connection.release();
+            return res.status(403).json({ error: true, msg: 'Incorrect username or password' });
+        }
+
+        if (user[0].mail_verify === 0) {
+            connection.release();
+            return res.status(403).json({ error: true, msg: 'Please verify your mail' });
+        }
+
+        const passwordMatch = await bcrypt.compare(validatedPassword, user[0].password);
+        if (passwordMatch) {
+            const payload = {
+                iss: config.NameSite,
+                sub: user[0].id,
+                iat: Math.floor(Date.now() / 1000),
+                exp: Math.floor(Date.now() / 1000) + 3600,
+            };
+
+            try {
+                const token = jwt.sign(payload, JWT_SECRET_KEY, { algorithm: 'HS256' });
+
+                connection.release();
+                return res.status(200).json({
+                    error: false,
+                    msg: 'Login successful',
+                    url: '/home',
+                    data: { jwt: token }
+                });
+            } catch (err) {
+                console.error("[ERROR] JWT Error: ", err);
+                connection.release();
+                return res.status(500).json({ error: true, msg: 'JWT Error' });
+            }
+        } else {
+            connection.release();
+            return res.status(400).json({ error: true, msg: 'Incorrect username or password' });
+        }
     } catch (err) {
-        console.error("[ERROR] JWT Error: ", err);
-        connection.release();
-        return { error: true, msg: 'JWT Error' };
+        console.error("[ERROR] MySQL Error: ", err);
+        return res.status(500).json({ error: true, msg: 'Database Error' });
     }
 }
 
-module.exports = loginDiscord;
+export default login;

@@ -1,9 +1,9 @@
-const express = require('express');
-const app = express();
-const routes = require('./routes/index');
-const logger = require('./logger');
+import express from 'express';
+import routes from './routes/index.js';
+import logger from './logger.js';
+import mysql from './inc/mysql.js';
 
-const mysql = require('./inc/mysql');
+const app = express();
 
 mysql.getConnection((err, connection) => {
     if (err) {
@@ -14,24 +14,22 @@ mysql.getConnection((err, connection) => {
     }
 });
 
-
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use((req, res, next) => {
     res.on('finish', () => {
-      let { ip, method, originalUrl, httpVersion } = req;
-      const status = res.statusCode;
-      const statusMessage = res.statusMessage || getDefaultStatusMessage(status);
-  
-      ip = ip.replace(/^::ffff:/, '');
-  
-      const logMessage = `${ip} - "${method} ${originalUrl} HTTP/${httpVersion}" ${status} ${statusMessage}`;
-      logger.info(logMessage);
+        let { ip, method, originalUrl, httpVersion } = req;
+        const status = res.statusCode;
+        const statusMessage = res.statusMessage || getDefaultStatusMessage(status);
+
+        ip = ip.replace(/^::ffff:/, '');
+
+        const logMessage = `${ip} - "${method} ${originalUrl} HTTP/${httpVersion}" ${status} ${statusMessage}`;
+        logger.info(logMessage);
     });
     next();
-  });
+});
 
 app.use('/api', routes);
 

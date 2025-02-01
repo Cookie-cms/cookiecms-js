@@ -119,7 +119,7 @@ async function validatePassword(connection, userId, password) {
     return bcrypt.compare(password, user[0].password);
 }
 
-router.post('/edit', upload.single('skin'), async (req, res) => {
+async function editProfile(req, res) {
     const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
 
     if (!token) {
@@ -178,6 +178,6 @@ router.post('/edit', upload.single('skin'), async (req, res) => {
         console.error("[ERROR] MySQL Error: ", err);
         res.status(500).json({ error: true, msg: 'Internal Server Error: ' + err.message });
     }
-});
+};
 
-module.exports = router;
+export default editProfile;

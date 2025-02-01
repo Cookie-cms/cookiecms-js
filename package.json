@@ -3,15 +3,20 @@
   "version": "1.0.0",
   "description": "A simple Express.js application",
   "main": "src/app.js",
+  "type": "module",
   "scripts": {
     "start": "node src/app.js",
     "dev": "nodemon src/app.js"
   },
   "dependencies": {
+    "bcrypt": "^5.1.1",
     "discord-oauth2-api": "^1.1.2",
     "express": "latest",
     "js-yaml": "^4.1.0",
+    "jsonwebtoken": "^9.0.2",
     "mysql": "^2.18.1",
+    "mysql2": "^3.12.0",
+    "uuid": "^11.0.5",
     "winston": "^3.17.0"
   },
   "devDependencies": {

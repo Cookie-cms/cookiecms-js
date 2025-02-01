@@ -1,8 +1,6 @@
-const express = require('express');
-const router = express.Router();
-const jwt = require('jsonwebtoken');
-const mysql = require('../../inc/mysql');
-const readConfig = require('../../inc/yamlReader');
+import jwt from 'jsonwebtoken';
+import mysql from '../../inc/mysql.js';
+import readConfig from '../../inc/yamlReader.js';
 
 const config = readConfig(process.env.CONFIG_PATH || '../config.yml');
 const JWT_SECRET_KEY = config.securecode;
@@ -26,22 +24,20 @@ async function logout(req, res) {
 
     try {
         const decoded = jwt.verify(token, JWT_SECRET_KEY);
-
         const connection = await mysql.getConnection();
 
         if (await isTokenBlacklisted(connection, token)) {
             connection.release();
-            return res.status(400).json({ error: true, msg: "Token has already been blacklisted", url: "/login" });
+            return res.status(400).json({ error: true, msg: "Token is already blacklisted" });
         }
 
         await blacklistToken(connection, token);
-
         connection.release();
-        return res.status(200).json({ error: false, msg: "Logout successful, token added to blacklist", url: "/login" });
-    } catch (err) {
-        console.error("[ERROR] JWT Error: ", err);
-        return res.status(400).json({ error: true, msg: "Invalid or expired token", url: "/login" });
-    }
-};
 
-module.exports = router;
+        res.status(200).json({ message: "Logout successful" });
+    } catch (err) {
+        res.status(400).json({ error: true, msg: "Invalid token" });
+    }
+}
+
+export default logout;

@@ -1,7 +1,5 @@
-const express = require('express');
-const router = express.Router();
-const mysql = require('../../inc/mysql');
-const readConfig = require('../../inc/yamlReader');
+import mysql from '../../inc/mysql.js';
+import readConfig from '../../inc/yamlReader.js';
 
 const config = readConfig(process.env.CONFIG_PATH || '../config.yml');
 
@@ -57,5 +55,4 @@ async function requestVerificationCode(req, res) {
     }
 }
 
-
-module.exports =  requestVerificationCode;
+export default requestVerificationCode;
