@@ -1,7 +1,10 @@
-const express = require('express');
-const jwt = require('jsonwebtoken');
-const mysql = require('../../inc/mysql');
-const readConfig = require('../../inc/yamlReader');
+import bcrypt from 'bcrypt';
+import mysql from '../../inc/mysql.js';
+import { v4 as uuidv4 } from 'uuid';
+import jwt from 'jsonwebtoken';
+import readConfig from '../../inc/yamlReader.js';
+import logger from '../../logger.js';
+
 
 const config = readConfig(process.env.CONFIG_PATH || '../config.yml');
 const JWT_SECRET_KEY = config.securecode;
@@ -21,7 +24,10 @@ async function isJwtExpiredOrBlacklisted(token, connection, secret) {
         }
         return { valid: true, data: decoded };
     } catch (err) {
-        return false;
+        if (err.name === 'TokenExpiredError') {
+            return false;
+        }
+        throw err;
     }
 }
 

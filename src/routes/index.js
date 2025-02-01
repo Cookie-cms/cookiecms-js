@@ -1,5 +1,6 @@
 import express from 'express';
 import auth from '../modules/auth/index.js';
+import home from '../modules/home/index.js';
 
 const router = express.Router();
 
@@ -15,9 +16,7 @@ router.post('/auth/registerfinish', auth.finishRegister);
 
 
 
-router.get('/home', (req, res) => {
-    res.send('Welcome to the Express app!');
-});
+router.get('/home', home.home);
 
 router.post('/home/edit', (req, res) => {
     res.send('Welcome to the Express app!');

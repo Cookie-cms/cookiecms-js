@@ -1,98 +1,76 @@
-import bcrypt from 'bcrypt';
-import pool from '../../inc/mysql.js';
 import { v4 as uuidv4 } from 'uuid';
-import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
+import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import readConfig from '../../inc/yamlReader.js';
-import logger from '../../logger.js';
-
+import pool from '../../inc/mysql.js';
 
 const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
 
-function validate(data) {
-    data = data.trim();
-    data = data.replace(/<[^>]*>?/gm, '');
-    return data;
-}
-
-async function isJwtExpiredOrBlacklisted(token, connection, secret) {
-    try {
-        const decoded = jwt.verify(token, secret);
-        const [blacklistedToken] = await connection.query("SELECT * FROM blacklisted_jwts WHERE jwt = ?", [token]);
-        if (blacklistedToken.length > 0) {
-            return false;
-        }
-        return { valid: true, data: decoded };
-    } catch (err) {
-        return false;
-    }
-}
-
-async function generateUUIDv4() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        const r = (Math.random() * 16) | 0,
-            v = c === 'x' ? r : (r & 0x3) | 0x8;
-        return v.toString(16);
-    });
-}
-
 async function finishRegister(req, res) {
-    const { username, password } = req.body;
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    const data = req.body;
 
-    if (!username) {
+    // console.log("Incoming request body: " + JSON.stringify(data, null, 2));
+
+    if (!data.username) {
+        console.log("Username is required.");
         return res.status(400).json({ error: true, msg: 'Username is required.' });
     }
 
-    if (password && password.length < 6) {
-        return res.status(400).json({ error: true, msg: 'Password must be at least 6 characters.' });
+    if (data.password) {
+        console.log("Password cannot be changed.");
+        return res.status(400).json({ error: true, msg: 'Password cannot be changed.' });
     }
+
+    const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
 
     if (!token) {
-        return res.status(401).json({ error: true, msg: 'Invalid token or session expired.' });
+        return res.status(401).json({ error: true, msg: 'Invalid JWT', code: 401 });
     }
 
-    try {
-        const connection = await pool.getConnection();
-        const status = await isJwtExpiredOrBlacklisted(token, connection, JWT_SECRET_KEY);
+    const connection = await pool.getConnection();
+    const status = await isJwtExpiredOrBlacklisted(token, connection, JWT_SECRET_KEY);
 
-        if (status) {
-            const userId = status.data.sub;
+    // console.log("Token status:", status);
 
-            const [user] = await connection.query("SELECT username, uuid, mail_verify, password FROM users WHERE id = ?", [userId]);
+    if (!status.valid) {
+        connection.release();
+        return res.status(401).json({ error: true, msg: status.message });
+    }
 
-            if (user && user.length && (user[0].username || user[0].uuid || user[0].password)) {
-                connection.release();
-                logger.info(`User ${user[0].username} UUID: ${user[0].uuid}`);
-                return res.status(409).json({ error: true, msg: 'You already have a Player account', url: '/home' });
-            }
+    const userId = status.data.sub;
 
-            const [existingUsername] = await connection.query("SELECT username FROM users WHERE username = ?", [username]);
+    const [user] = await connection.query("SELECT username, uuid, mail_verify, password FROM users WHERE id = ?", [userId]);
 
-            if (existingUsername.length) {
-                connection.release();
-                return res.status(409).json({ error: true, msg: 'Username already taken.' });
-            } else {
-                const uuid = uuidv4();
-                await connection.query("UPDATE users SET uuid = ?, username = ? WHERE id = ?", [uuid, username, userId]);
+    // console.log("User data: " + JSON.stringify(user, null, 2));
 
-                if (password) {
-                    const hashedPassword = await bcrypt.hash(password, 10);
-                    await connection.query("UPDATE users SET password = ? WHERE id = ?", [hashedPassword, userId]);
-                }
+    if (user && user.length && (user[0].username || user[0].uuid)) {
+        console.log("User already has a Player account.");
+        connection.release();
+        return res.status(409).json({ error: true, msg: 'You already have a Player account', url: '/home' });
+    }
 
-                connection.release();
-                return res.status(200).json({ error: false, msg: 'Created', url: '/home' });
-            }
+    const [existingUsername] = await connection.query("SELECT username FROM users WHERE username = ?", [data.username]);
+
+    if (existingUsername.length) {
+        console.log("Username already taken.");
+        connection.release();
+        return res.status(409).json({ error: true, msg: 'Username already taken.' });
+    } else {
+        const newUuid = uuidv4();
+        await connection.query("UPDATE users SET uuid = ?, username = ? WHERE id = ?", [newUuid, data.username, userId]);
+
+        const affectedRows = await connection.query("SELECT ROW_COUNT() AS affectedRows");
+        console.log("User update affected rows: " + affectedRows[0].affectedRows);
+        if (affectedRows[0].affectedRows > 0) {
+            // console.log("User updated successfully. Rows affected: " + affectedRows[0].affectedRows);
         } else {
-            connection.release();
-            return res.status(401).json({ error: true, msg: 'Invalid token or session expired.' });
+            // console.log("Update executed, but no rows were affected. Rows affected: " + affectedRows[0].affectedRows);
         }
-    } catch (err) {
-        logger.error("[ERROR] MySQL Error: ", err);
-        return res.status(500).json({ error: true, msg: 'An error occurred. Please try again later.' });
     }
+
+    connection.release();
+    return res.status(200).json({ success: true, msg: 'Registration completed successfully', url: '/home' });
 }
 
 export default finishRegister;

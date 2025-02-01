@@ -1,17 +1,14 @@
-const express = require('express');
-const bcrypt = require('bcrypt');
-const mysql = require('../../inc/mysql');
-const readConfig = require('../../inc/yamlReader');
-const jwt = require('jsonwebtoken');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+import bcrypt from 'bcrypt';
+import mysql from '../../inc/mysql.js';
+import { v4 as uuidv4 } from 'uuid';
+import jwt from 'jsonwebtoken';
+import readConfig from '../../inc/yamlReader.js';
+import logger from '../../logger.js';
 
 const config = readConfig(process.env.CONFIG_PATH || '../config.yml');
 const JWT_SECRET_KEY = config.securecode;
 
-const router = express.Router();
-const upload = multer({ dest: 'uploads/' });
+
 
 function validate(data) {
     data = data.trim();

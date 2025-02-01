@@ -3,7 +3,7 @@ import readConfig from '../../inc/yamlReader.js';
 // import logger from './../logger.js';
 
 
-const config = readConfig(process.env.CONFIG_PATH || '../config.yml');
+const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
 
 async function ConfirmMail(req, res) {
