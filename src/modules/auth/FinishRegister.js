@@ -3,8 +3,7 @@ import pool from '../../inc/mysql.js';
 import { v4 as uuidv4 } from 'uuid';
 import jwt from 'jsonwebtoken';
 import readConfig from '../../inc/yamlReader.js';
-import { logger } from 'winston';
-// import logger from '../../logger.js';
+import logger from '../../logger.js';
 
 
 const config = readConfig();
@@ -65,6 +64,7 @@ async function finishRegister(req, res) {
 
             if (user && user.length && (user[0].username || user[0].uuid || user[0].password)) {
                 connection.release();
+                logger.info(`User ${user[0].username} UUID: ${user[0].uuid}`);
                 return res.status(409).json({ error: true, msg: 'You already have a Player account', url: '/home' });
             }
 
@@ -90,7 +90,7 @@ async function finishRegister(req, res) {
             return res.status(401).json({ error: true, msg: 'Invalid token or session expired.' });
         }
     } catch (err) {
-        console.error("[ERROR] MySQL Error: ", err);
+        logger.error("[ERROR] MySQL Error: ", err);
         return res.status(500).json({ error: true, msg: 'An error occurred. Please try again later.' });
     }
 }
