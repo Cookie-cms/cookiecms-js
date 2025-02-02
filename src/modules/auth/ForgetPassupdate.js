@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt';
-import createResponse from '../../inc/_reponse.js';
+import createResponse from '../../inc/_common.js';
 import mysql from '../../inc/mysql.js';
 import readConfig from '../../inc/yamlReader.js';
 

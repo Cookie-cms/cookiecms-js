@@ -7,9 +7,9 @@ debugToken: 64c82dcb-c29d-4ff8-b6e6-b796a2672a1
 
 # Duplicating audit from site to discord 
 AuditSecret: 
-  enabled: true
+  enabled: false
   url: https://discord.com/api/webhooks/1335629021349806080/LgTW8ar3URK41OTcMIsnsxSs3cTVeKZPtOu0x4xm138az2J4guy_VuBjwlmR4pVG2FWA
-  spamming: 1335628917415088239 # here will be send created account
+  spamming: "1335628917415088239"
   audit: 1335628983265394803 # main information change password change mail etc
 
 
@@ -39,7 +39,6 @@ discord:
   bot: ""
   guild_id: 0
   role: 0
-  webhooks: ""
 
 
 # Not realised

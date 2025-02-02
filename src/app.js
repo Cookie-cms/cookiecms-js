@@ -3,7 +3,7 @@ import routes from './routes/index.js';
 import logger from './logger.js';
 import mysql from './inc/mysql.js';
 import cors from 'cors';
-import createResponse from './inc/_reponse.js';
+import createResponse from './inc/_common.js';
 
 export default {
     createResponse
