@@ -2,7 +2,12 @@ import express from 'express';
 import routes from './routes/index.js';
 import logger from './logger.js';
 import mysql from './inc/mysql.js';
+import cors from 'cors';
+import createResponse from './inc/_reponse.js';
 
+export default {
+    createResponse
+}
 
 const app = express();
 
@@ -33,6 +38,8 @@ app.use((req, res, next) => {
 });
 
 app.use('/api', routes);
+
+app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

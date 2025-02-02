@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
     "discord-oauth2": "^2.12.1",
     "discord-oauth2-api": "^1.1.2",
     "express": "latest",

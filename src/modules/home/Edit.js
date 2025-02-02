@@ -5,16 +5,8 @@ import jwt from 'jsonwebtoken';
 import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 
-const config = readConfig(process.env.CONFIG_PATH || '../config.yml');
+const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
-
-
-
-function validate(data) {
-    data = data.trim();
-    data = data.replace(/<[^>]*>?/gm, '');
-    return data;
-}
 
 async function isJwtExpiredOrBlacklisted(token, connection, secret) {
     try {
@@ -55,43 +47,43 @@ async function changeCape(connection, userId, capeId) {
     await connection.query("UPDATE users SET cape_id = ? WHERE id = ?", [capeId, userId]);
 }
 
-async function uploadSkin(connection, userId, skinFile) {
-    const targetDir = path.join(__dirname, '../../skins/');
+// async function uploadSkin(connection, userId, skinFile) {
+//     const targetDir = path.join(__dirname, '../../skins/');
 
-    if (!fs.existsSync(targetDir)) {
-        fs.mkdirSync(targetDir, { recursive: true });
-    }
+//     if (!fs.existsSync(targetDir)) {
+//         fs.mkdirSync(targetDir, { recursive: true });
+//     }
 
-    if (!skinFile || skinFile.mimetype !== 'image/png') {
-        throw new Error('Only PNG images are allowed');
-    }
+//     if (!skinFile || skinFile.mimetype !== 'image/png') {
+//         throw new Error('Only PNG images are allowed');
+//     }
 
-    const { width, height } = await new Promise((resolve, reject) => {
-        const image = new Image();
-        image.onload = () => resolve({ width: image.width, height: image.height });
-        image.onerror = reject;
-        image.src = skinFile.path;
-    });
+//     const { width, height } = await new Promise((resolve, reject) => {
+//         const image = new Image();
+//         image.onload = () => resolve({ width: image.width, height: image.height });
+//         image.onerror = reject;
+//         image.src = skinFile.path;
+//     });
 
-    if (width !== 64 || height !== 64) {
-        throw new Error('Image dimensions must be 64x64 pixels');
-    }
+//     if (width !== 64 || height !== 64) {
+//         throw new Error('Image dimensions must be 64x64 pixels');
+//     }
 
-    const skinName = generateUUIDv4();
-    const newFileName = `${skinName}.png`;
-    const targetFile = path.join(targetDir, newFileName);
+//     const skinName = generateUUIDv4();
+//     const newFileName = `${skinName}.png`;
+//     const targetFile = path.join(targetDir, newFileName);
 
-    const [countSkin] = await connection.query("SELECT COUNT(*) AS total_rows FROM skin_lib WHERE uid = ?", [userId]);
-    const maxfile = parseInt(config.MaxSavedSkins, 10);
+//     const [countSkin] = await connection.query("SELECT COUNT(*) AS total_rows FROM skin_lib WHERE uid = ?", [userId]);
+//     const maxfile = parseInt(config.MaxSavedSkins, 10);
 
-    if (countSkin[0].total_rows >= maxfile) {
-        throw new Error(`You have reached the limit of ${maxfile} skins.`);
-    }
+//     if (countSkin[0].total_rows >= maxfile) {
+//         throw new Error(`You have reached the limit of ${maxfile} skins.`);
+//     }
 
-    fs.renameSync(skinFile.path, targetFile);
+//     fs.renameSync(skinFile.path, targetFile);
 
-    await connection.query("INSERT INTO skin_lib (uid, name, nff) VALUES (?, ?, ?)", [userId, newFileName, skinName]);
-}
+//     await connection.query("INSERT INTO skin_lib (uid, name, nff) VALUES (?, ?, ?)", [userId, newFileName, skinName]);
+// }
 
 async function removeSkin(connection, userId, skinId) {
     const [skinData] = await connection.query("SELECT name FROM skin_lib WHERE uid = ? AND id = ?", [userId, skinId]);

@@ -20,8 +20,10 @@ router.post('/auth/register', auth.signup);
 router.post('/auth/registerfinish', auth.finishRegister);
 
 router.post('/auth/forgetpass', auth.resetPassword);
+router.post('/auth/forgetpass/validate', auth.validate_code_fp);
+router.post('/auth/forgetpass/update', auth.updatepass);
 
-router.get('/auth/discord', auth.generateAuthLink);
+router.get('/auth/discord/callback', auth.discordCallback);
 
 router.get('/auth/singindiscord', auth.SigninDiscord);
 router.get('/auth/singupdiscord', auth.SingupDiscord);

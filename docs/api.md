@@ -110,6 +110,106 @@ Steps
 
 ---
 
+### **forget pass**
+Steps
+- Request code
+- validate code
+- Update coed
+
+### step 1
+`POST /api/auth/forgetpass`
+
+**Request Body**:
+```json
+{
+    "mail": "",       // User's email address
+}
+```
+
+**Responses**:
+
+- **200 OK**:
+```json
+{
+    "error": false,
+    "msg": "Code sent please check your mail",
+    "url": "string",  // URL for the next step, if applicable
+    "data": {}
+}
+```
+
+- **400 Bad Request**:
+```json
+{
+    "error": true,
+    "msg": "Invalid email or password",
+    "url": null,
+    "data": {}
+}
+```
+
+### step 2
+`POST /api/auth/forgetpass/validate`
+
+**Request Body**:
+```json
+{
+    "code": "",       // User's email address
+}
+```
+
+**Responses**:
+
+- **204 OK**
+
+- **400 Bad Request**:
+```json
+{
+    "error": true,
+    "msg": "Invalid code",
+    "url": null,
+    "data": {}
+}
+```
+
+
+### step 3
+`POST /api/auth/forgetpass/update`
+
+**Request Body**:
+```json
+{
+    "code": "",       // User's email address
+    "password": "",       // User's email address
+}
+```
+
+**Responses**:
+
+- **200 OK**:
+```json
+{
+    "error": false,
+    "msg": "Password updated",
+    "url": "string",  // URL for the next step, if applicable
+    "data": {}
+}
+```
+
+- **400 Bad Request**:
+```json
+{
+    "error": true,
+    "msg": "Invalid code",
+    "url": null,
+    "data": {}
+}
+```
+
+
+
+---
+
 ### **Confirm Email**
 `POST /api/auth/confirm`
 
@@ -151,7 +251,7 @@ Steps
 **Request Headers**:
 - **Authorization**: Bearer `jwt_token`
 
-Password requried (min 8 characters)
+Password required (min 8 characters)
 **Request Body**:
 ```json
 {
@@ -181,7 +281,7 @@ Password requried (min 8 characters)
     "data": {}
 }
 ```
-- **400 Bad request**
+- **400 Bad Request**:
 ```json
 {
     "error": true,
@@ -299,11 +399,11 @@ Password requried (min 8 characters)
 
 - **For change settings**:
 
-options can be 
-``username`` requried password
-``password`` requried old_password
-``cape``
-upload skin via form html
+Options can be:
+- `username` (requires password)
+- `password` (requires old_password)
+- `cape`
+- Upload skin via HTML form
 
 <details>
 <summary>Examples</summary>
@@ -336,6 +436,19 @@ upload skin via form html
 ```
 </details>
 
+
+<details>
+<summary>Mail example</summary>
+<br>
+1. **Update mail**
+
+- **100 Continue**
+```json
+{
+    "action": "update_mail",
+}
+```
+
 #### **Upload Skins**
 `POST /api/home/edit/upload`
 
@@ -350,18 +463,6 @@ upload skin via form html
 }
 ```
 
-
-<details>
-<summary>Mail example</summary>
-<br>
-1. **Update mail**
-
-- **100 Continue**
-```json
-{
-    "action": "update_mail",
-}
-```
 
 - **100 Continue**
 ```json

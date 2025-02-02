@@ -3,11 +3,14 @@ import SigninDiscord from './SinginDiscord.js';
 import logout from './Logout.js';
 import signup from './Singup.js';
 import SingupDiscord from './SingupDiscord.js';
-import resetPassword from './ForgetPass.js';
-import requestVerificationCode from './Requestvc.js';
+import resetPassword from './ForgetPassvc.js';
+import validate_code_fp from './ForgetPassconfirm.js';
+import updatepass from './ForgetPassconfirm.js';
 import confirmMail from './ConfirmMail.js';
 import finishRegister from './FinishRegister.js';
 import generateAuthLink from './discordlink.js';
+import discordCallback from './callback.js';
+import requestVerificationCode from './Requestvc.js';
 
 export default {
     login,
@@ -19,5 +22,8 @@ export default {
     requestVerificationCode,
     confirmMail,
     finishRegister,
-    generateAuthLink
+    generateAuthLink,
+    discordCallback,
+    validate_code_fp,
+    updatepass
 };

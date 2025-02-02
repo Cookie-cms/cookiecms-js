@@ -54,7 +54,7 @@ export async function signup(req, res) {
         await connection.query("INSERT INTO verify_codes (userid, code, expire, action) VALUES (?, ?, ?, ?)", [userID, randomCode, timexp, action]);
 
         connection.release();
-        return res.status(200).json({ error: false, msg: "Registration successful. Please proceed to login.", url: "/home" });
+        return res.status(200).json({ error: false, msg: "Registration successful. Please check your mail to verify.", url: "/signin" });
     } catch (err) {
         console.error("[ERROR] MySQL Error: ", err);
         return res.status(500).json({ error: true, msg: "An error occurred during registration. Please try again later." });
