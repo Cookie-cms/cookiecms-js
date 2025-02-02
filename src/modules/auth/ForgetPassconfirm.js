@@ -7,7 +7,7 @@ const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
 
 async function updatepass(req, res) {
-    const { code } = req.body;
+    const { code, password } = req.body;
 
     if (!code) {
         return res.status(400).json({ error: true, msg: 'Code not provided' });
@@ -36,8 +36,10 @@ async function updatepass(req, res) {
             return res.status(400).json({ error: true, msg: 'Token has expired' });
         }
 
-        if (codeData.action === 2) {
-            await connection.query("UPDATE users SET mail_verify = 1 WHERE id = ?", [codeData.userid]);
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        if (codeData.action === 4) {
+            await connection.query("UPDATE users SET password = ? WHERE id = ?", [hashedPassword, codeData.userid]);
             await connection.query("DELETE FROM verify_codes WHERE code = ?", [code]);
 
             connection.release();
@@ -86,7 +88,7 @@ async function validate_code_fp(req, res) {
             await connection.query("UPDATE users SET mail_verify = 1 WHERE id = ?", [codeData.userid]);
 
             connection.release();
-            return res.status(200).json({ error: false, });
+            return res.status(204);
         } else {
             connection.release();
             return res.status(400).json({ error: true, msg: 'Invalid or expired token' });

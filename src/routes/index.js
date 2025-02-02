@@ -25,8 +25,8 @@ router.post('/auth/forgetpass/update', auth.updatepass);
 
 router.get('/auth/discord/callback', auth.discordCallback);
 
-router.get('/auth/singindiscord', auth.SigninDiscord);
-router.get('/auth/singupdiscord', auth.SingupDiscord);
+// router.get('/auth/singindiscord', auth.SigninDiscord);
+// router.get('/auth/singupdiscord', auth.SingupDiscord);
 
 
 // Home
