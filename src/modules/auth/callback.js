@@ -1,67 +1,41 @@
 import OAuth2 from 'discord-oauth2';
 import readConfig from '../../inc/yamlReader.js';
-import mysql from '../../inc/mysql.js';
 import jwt from 'jsonwebtoken';
+import mysql from '../../inc/mysql.js';
 
 const config = readConfig();
-
 const oauth = new OAuth2({
     clientId: config.discord.client_id,
     clientSecret: config.discord.secret_id,
     redirectUri: config.discord.redirect_url
 });
 
-
-async function checkuser(userid) {
-
-    const connection = await mysql.getConnection();
-    const [user] = await connection.query("SELECT * FROM users WHERE dsid = ?", [userid]);
-    connection.release();
-    if (!user.length || !user[0].username || !user[0].uuid || !user[0].password) {
-        return false;
-    }
-    return true;
-
+function generateToken(user) {
+    return jwt.sign(user, config.JWT_SECRET_KEY, { expiresIn: '1h' });
 }
 
-async function registerUser(userData) {
-    const connection = await mysql.getConnection();
-    const userID =  Math.floor(Math.random() * (999999999999999999 - 1 + 1)) + 1;
+async function registerUser(userResponse, res) {
+    try {
+        const connection = await mysql.getConnection();
+        const [existingUser] = await connection.query("SELECT id FROM users WHERE discord_id = ?", [userResponse.id]);
 
-    const [existingUser] = await connection.query("SELECT * FROM users WHERE mail = ?", [userData.email]);
+        if (existingUser.length === 0) {
+            const userID = Math.floor(Math.random() * (999999999999999999 - 1 + 1)) + 1;
+            await connection.query("INSERT INTO users (id, discord_id, username) VALUES (?, ?, ?)", [userID, userResponse.id, userResponse.username]);
+        }
 
-    if (existingUser.length > 0) {
         connection.release();
-        return res.status(409).json({ error: true, msg: "Email is already registered." });
+
+        const token = generateToken({ id: userResponse.id, username: userResponse.username });
+
+        res.json({ user: userResponse, token });
+    } catch (error) {
+        console.error('Error during user registration:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
     }
-
-    const [result] = await connection.query(
-        "INSERT INTO users (id, mail, mail_verify) VALUES (?, ?, ?)",
-        [userID, userData.email, 1]
-    );
-    connection.release();
-    return result.insertId;
 }
 
-function generateToken(userId) {
-    const payload = {
-        iss: config.NameSite,
-        sub: userId,
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + 3600,
-    };
-    const token = jwt.sign(payload, JWT_SECRET_KEY, { algorithm: 'HS256' });
-    connection.release();
-    return res.status(200).json({
-        error: false,
-        msg: 'Login successful',
-        url: '/home',
-        data: { jwt: token }
-    });
-}
-
-
-export default async function discordCallback(req, res) {
+export async function discordCallback(req, res) {
     const code = req.query.code;
 
     if (!code) {
@@ -77,18 +51,8 @@ export default async function discordCallback(req, res) {
 
         const userResponse = await oauth.getUser(tokenResponse.access_token);
 
-        // Проверяем, зарегистрирован ли пользователь
-        if (await checkuser(userResponse.id)) {
-            // Пользователь зарегистрирован, отправляем токен
-            const token = generateToken(userResponse.id);
-            return res.status(200).json(createResponse(false, 'Login successful', '/home', { jwt: token }));
-        } else {
-            // Если пользователь не зарегистрирован, регистрируем его
-            const userId = await registerUser(userResponse);
-            const token = generateToken(userId);
-            return res.status(200).json(createResponse(false, 'redirect to signup', null, { jwt: token }));
-        }
-
+        // Register the user and generate a token
+        await registerUser(userResponse, res);
     } catch (error) {
         console.error('Error during Discord OAuth2 callback:', error);
         res.status(500).json({ error: 'Internal Server Error' });
