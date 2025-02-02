@@ -13,7 +13,13 @@ const oauth = new OAuth2({
 });
 
 function generateToken(user) {
-    return jwt.sign(user, SECRET_KEY, { expiresIn: '1h' });
+    const payload = {
+        iss: config.NameSite,
+        sub: user[0].id,
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 3600,
+    };
+    return jwt.sign(payload, SECRET_KEY, { expiresIn: '1h' });
 }
 
 async function registerUser(userResponse, res) {
