@@ -11,6 +11,8 @@ export default {
 
 const app = express();
 
+app.use(cors());
+
 mysql.getConnection((err, connection) => {
     if (err) {
         logger.error('Error connecting to MySQL:', err);
@@ -39,7 +41,6 @@ app.use((req, res, next) => {
 
 app.use('/api', routes);
 
-app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
