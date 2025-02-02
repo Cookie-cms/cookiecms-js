@@ -15,7 +15,7 @@ const oauth = new OAuth2({
 function generateToken(user) {
     const payload = {
         iss: config.NameSite,
-        sub: user[0].id,
+        sub: user.id,
         iat: Math.floor(Date.now() / 1000),
         exp: Math.floor(Date.now() / 1000) + 3600,
     };
@@ -39,7 +39,7 @@ async function registerUser(userResponse, res) {
 
         connection.release();
 
-        const token = generateToken({ id: userResponse.id, username: userResponse.username });
+        const token = generateToken(userResponse);
 
         res.json({ user: userResponse, token });
     } catch (error) {
