@@ -42,7 +42,7 @@ app.use((req, res, next) => {
 app.use('/api', routes);
 
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {
     logger.info(`Server is running on port http://localhost:${PORT}`);
 });

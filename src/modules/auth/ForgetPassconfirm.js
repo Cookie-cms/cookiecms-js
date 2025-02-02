@@ -5,7 +5,7 @@ import logger from '../../logger.js';
 // import createResponse from '../../utils/createResponse.js';
 
 const config = readConfig();
-const JWT_SECRET_KEY = config.securecode;
+// const JWT_SECRET_KEY = config.securecode;
 
 
 export async function validate_code_fp(req, res) {

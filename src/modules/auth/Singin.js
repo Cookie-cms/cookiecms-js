@@ -2,9 +2,13 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import mysql from '../../inc/mysql.js';
 import readConfig from '../../inc/yamlReader.js';
+import logger from '../../logger.js';
 
 const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
+
+// logger.info('SEC', JWT_SECRET_KEY);
+
 
 function validate(data) {
     data = data.trim();
