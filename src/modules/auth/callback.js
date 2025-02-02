@@ -51,7 +51,10 @@ export async function discordCallback(req, res) {
         const tokenResponse = await oauth.tokenRequest({
             code,
             scope: config.discord.scopes.join(' '),
-            grantType: 'authorization_code'
+            grantType: 'authorization_code',
+            redirectUri: config.discord.redirect_url,
+            clientId: config.discord.client_id,
+            clientSecret: config.discord.secret_id
         });
 
         const userResponse = await oauth.getUser(tokenResponse.access_token);
