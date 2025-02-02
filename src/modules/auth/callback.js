@@ -21,7 +21,7 @@ async function registerUser(userResponse, res) {
 
         if (existingUser.length === 0) {
             const userID = Math.floor(Math.random() * (999999999999999999 - 1 + 1)) + 1;
-            await connection.query("INSERT INTO users (id, dsid) VALUES (?, ?, ?)", [userID, userResponse.id]);
+            await connection.query("INSERT INTO users (id, dsid) VALUES (?, ?)", [userID, userResponse.id]);
         }
 
         connection.release();
