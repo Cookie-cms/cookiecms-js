@@ -4,6 +4,8 @@ import jwt from 'jsonwebtoken';
 import mysql from '../../inc/mysql.js';
 
 const config = readConfig();
+const SECRET_KEY = config.JWT_SECRET_KEY; // Ensure this is set in config.yml
+
 const oauth = new OAuth2({
     clientId: config.discord.client_id,
     clientSecret: config.discord.secret_id,
@@ -11,7 +13,7 @@ const oauth = new OAuth2({
 });
 
 function generateToken(user) {
-    return jwt.sign(user, config.JWT_SECRET_KEY, { expiresIn: '1h' });
+    return jwt.sign(user, SECRET_KEY, { expiresIn: '1h' });
 }
 
 async function registerUser(userResponse, res) {
