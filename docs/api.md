@@ -568,18 +568,11 @@ response
 
 ## **Discord Integration**
 
-### **GET /discord/url**
+### **GET /auth/discord/callback**
 
-```
-{
-    "error": false,
-    "msg": "",
-    "url": "",
-    "data": {
-        "link": ""
-    }
-}
-```
+parameters ?code=code
+
++
 
 
 

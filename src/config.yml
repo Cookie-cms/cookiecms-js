@@ -41,7 +41,6 @@ discord:
   role: 0
 
 
-# Not realised
 permissions:
   0:
     - page.userlist
