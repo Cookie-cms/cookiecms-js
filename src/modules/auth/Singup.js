@@ -1,6 +1,10 @@
 import pool from '../../inc/mysql.js';
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
+import axios from 'axios';
+import readConfig from '../../inc/yamlReader.js';
+
+const config = readConfig();
 
 function validate(data) {
     data = data.trim();
@@ -36,11 +40,28 @@ export async function signup(req, res) {
             return res.status(409).json({ error: true, msg: "Email is already registered." });
         }
 
-        const userID =  Math.floor(Math.random() * (999999999999999999 - 1 + 1)) + 1;
-       
+        const userID = Math.floor(Math.random() * (999999999999999999 - 1 + 1)) + 1;
         const hashedPassword = await bcrypt.hash(validatedPassword, 10);
 
         await connection.query("INSERT INTO users (id, mail, password) VALUES (?, ?, ?)", [userID, validatedMail, hashedPassword]);
+
+        // if (config.AuditSecret.enabled) {
+        //      // Prepare the payload
+        //     const payload = {
+        //         description: `mail ${mail}\ntime ${new Date().toISOString()}`,
+        //         color: '#00b0f4',
+        //         footer: {
+        //             text: 'Cookiecms',
+        //             icon_url: 'https://avatars.githubusercontent.com/u/152858724?s=200&v=4'
+        //         }
+        //     };
+
+        //     // const response = await axios.post('https://discord.com/api/webhooks/1335629021349806080/LgTW8ar3URK41OTcMIsnsxSs3cTVeKZPtOu0x4xm138az2J4guy_VuBjwlmR4pVG2FWA', payload);
+
+
+        //     const auditUrl = `${config.AuditSecret.url}?thread_id=${config.discord.thread_id}&spamming=${config.discord.spamming}`;
+        //     await axios.post(auditUrl, payload);
+        // }
 
         const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
         let randomCode = '';

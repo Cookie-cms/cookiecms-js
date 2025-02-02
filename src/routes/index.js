@@ -24,6 +24,7 @@ router.post('/auth/forgetpass/validate', auth.validate_code_fp);
 router.post('/auth/forgetpass/update', auth.updatepass);
 
 router.get('/auth/discord/callback', auth.discordCallback);
+router.get('/auth/discord/link', auth.generateAuthLink);
 
 // router.get('/auth/singindiscord', auth.SigninDiscord);
 // router.get('/auth/singupdiscord', auth.SingupDiscord);
