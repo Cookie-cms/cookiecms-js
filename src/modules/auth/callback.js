@@ -1,6 +1,8 @@
 import OAuth2 from 'discord-oauth2';
 import readConfig from '../../inc/yamlReader.js';
 import mysql from '../../inc/mysql.js';
+import jwt from 'jsonwebtoken';
+
 const config = readConfig();
 
 const oauth = new OAuth2({
