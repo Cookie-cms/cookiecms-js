@@ -1,16 +1,14 @@
+import bcrypt from 'bcrypt';
+import createResponse from '../../inc/_reponse.js';
 import mysql from '../../inc/mysql.js';
 import readConfig from '../../inc/yamlReader.js';
-import bcrypt from 'bcrypt';
-import logger from '../../logger.js';
-// import createResponse from '../../utils/createResponse.js';
 
 const config = readConfig();
-const JWT_SECRET_KEY = config.securecode;
 
-export async function updatepass(req, res) {
-    const { code, newPassword } = req.body;
+async function updatepass(req, res) {
+    const { code, password } = req.body;
 
-    if (!code || !newPassword) {
+    if (!code || !password) {
         return res.status(400).json(createResponse(true, 'Code and new password are required'));
     }
 
@@ -18,7 +16,7 @@ export async function updatepass(req, res) {
         const connection = await mysql.getConnection();
 
         const [result] = await connection.query(`
-            SELECT vc.userid, vc.action, vc.expire
+            SELECT vc.userid, vc.expire
             FROM verify_codes vc 
             JOIN users u ON vc.userid = u.id 
             WHERE vc.code = ?
@@ -31,22 +29,21 @@ export async function updatepass(req, res) {
 
         const codeData = result[0];
 
-        logger.info(`[INFO] Code Data: ${JSON.stringify(codeData)}`);
-
         // Check if the token is expired
         const currentTime = new Date();
         const expireTime = new Date(codeData.expire * 1000); // Convert Unix timestamp to milliseconds
+
         if (expireTime < currentTime) {
-            connection.release();
             const query = "DELETE FROM verify_codes WHERE code = ?";
             await connection.query(query, [code]);
 
+            connection.release();
             return res.status(400).json(createResponse(true, `Token has expired. Current time: ${currentTime} Expire time: ${expireTime}`));
         }
 
         // Hash the new password
         const saltRounds = 10;
-        const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
 
         // Update the user's password in the database
         await connection.query(`
@@ -65,6 +62,5 @@ export async function updatepass(req, res) {
         return res.status(500).json(createResponse(true, 'Database Error'));
     }
 }
-
 
 export default updatepass;
