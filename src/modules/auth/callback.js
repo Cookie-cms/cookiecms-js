@@ -17,11 +17,11 @@ function generateToken(user) {
 async function registerUser(userResponse, res) {
     try {
         const connection = await mysql.getConnection();
-        const [existingUser] = await connection.query("SELECT id FROM users WHERE discord_id = ?", [userResponse.id]);
+        const [existingUser] = await connection.query("SELECT id FROM users WHERE dsid = ?", [userResponse.id]);
 
         if (existingUser.length === 0) {
             const userID = Math.floor(Math.random() * (999999999999999999 - 1 + 1)) + 1;
-            await connection.query("INSERT INTO users (id, discord_id, username) VALUES (?, ?, ?)", [userID, userResponse.id, userResponse.username]);
+            await connection.query("INSERT INTO users (id, dsid) VALUES (?, ?, ?)", [userID, userResponse.id]);
         }
 
         connection.release();
@@ -58,3 +58,5 @@ export async function discordCallback(req, res) {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 }
+
+export default discordCallback;
