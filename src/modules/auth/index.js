@@ -5,7 +5,7 @@ import signup from './Singup.js';
 import SingupDiscord from './SingupDiscord.js';
 import resetPassword from './ForgetPassvc.js';
 import validate_code_fp from './ForgetPassconfirm.js';
-import updatepass from './ForgetPassconfirm.js';
+import updatepass from './ForgetPassupdate.js';
 import confirmMail from './ConfirmMail.js';
 import finishRegister from './FinishRegister.js';
 import generateAuthLink from './discordlink.js';
