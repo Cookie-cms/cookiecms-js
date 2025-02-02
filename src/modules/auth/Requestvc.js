@@ -33,6 +33,11 @@ async function requestVerificationCode(req, res) {
             return res.status(404).json({ error: true, msg: 'Email not found.' });
         }
 
+        if (user[0].mail_verify === 1) {
+            connection.release();
+            return res.status(403).json({ error: true, msg: 'Your mail already verified.' });
+        }
+
         // Generate a new verification code
         const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
         let randomCode = '';

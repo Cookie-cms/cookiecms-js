@@ -1,38 +1,16 @@
-import bcrypt from 'bcrypt';
 import mysql from '../../inc/mysql.js';
-import { v4 as uuidv4 } from 'uuid';
-import jwt from 'jsonwebtoken';
 import readConfig from '../../inc/yamlReader.js';
-import logger from '../../logger.js';
-
+import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 
 const config = readConfig(process.env.CONFIG_PATH || '../config.yml');
 const JWT_SECRET_KEY = config.securecode;
 
-function validate(data) {
-    data = data.trim();
-    data = data.replace(/<[^>]*>?/gm, '');
-    return data;
-}
-
-async function isJwtExpiredOrBlacklisted(token, connection, secret) {
-    try {
-        const decoded = jwt.verify(token, secret);
-        const [blacklistedToken] = await connection.query("SELECT * FROM blacklisted_jwts WHERE jwt = ?", [token]);
-        if (blacklistedToken.length > 0) {
-            return false;
-        }
-        return { valid: true, data: decoded };
-    } catch (err) {
-        if (err.name === 'TokenExpiredError') {
-            return false;
-        }
-        throw err;
-    }
-}
-
 async function getUserSkins(connection, userId) {
-    const [skins] = await connection.query("SELECT id, name, nff FROM skins_lib WHERE uid = ?", [userId]);
+    const [skins] = await connection.query(`
+        SELECT skins_library.uuid, skins_library.name, IFNULL(skins_library.cloak_id, 0) AS cloak_id
+        FROM skins_library
+        WHERE skins_library.ownerid = ?
+    `, [userId]);
     return skins;
 }
 
@@ -65,19 +43,41 @@ async function home(req, res) {
             return res.status(401).json({ error: true, msg: 'Your account is not finished', code: 401, url: '/login', data: response });
         }
 
+        const [selectedSkin] = await connection.query(`
+            SELECT skin_user.skin_id, skins_library.name AS skin_name, skins_library.cloak_id
+            FROM skin_user
+            JOIN skins_library ON skin_user.skin_id = skins_library.uuid
+            WHERE skin_user.uid = ?
+        `, [status.data.sub]);
+
         const [capes] = await connection.query(`
-            SELECT cloaks.*, cloaks_lib.name AS cloak_name
-            FROM cloaks
-            JOIN cloaks_lib ON cloaks.cid = cloaks_lib.id
-            WHERE cloaks.uid = ?
+            SELECT cloaks_lib.uuid AS id, cloaks_lib.name
+            FROM cloaks_users
+            JOIN cloaks_lib ON cloaks_users.cloak_id = cloaks_lib.uuid
+            WHERE cloaks_users.uid = ?
         `, [status.data.sub]);
 
         const skinList = await getUserSkins(connection, status.data.sub);
 
-        const capeList = capes.map(cape => ({
-            Id: cape.cid ? parseInt(cape.cid, 10) : null,
-            Name: cape.cloak_name || ""
-        }));
+        const capeList = capes.length > 0 ? capes.map(cape => ({
+            Id: cape.id,
+            Name: cape.name
+        })) : [];
+
+        let selectedCape = null;
+
+        if (selectedSkin.length > 0 && selectedSkin[0].cloak_id) {
+            const [cape] = await connection.query(`
+                SELECT uuid AS id, name FROM cloaks_lib WHERE uuid = ?;
+            `, [selectedSkin[0].cloak_id]);
+
+            if (cape.length > 0) {
+                selectedCape = {
+                    Id: cape[0].id,
+                    Name: cape[0].name
+                };
+            }
+        }
 
         const response = {
             error: false,
@@ -86,10 +86,13 @@ async function home(req, res) {
             data: {
                 Username: user[0].username,
                 Uuid: user[0].uuid,
-                Selected_Cape: 0,
-                Selected_Skin: 0,
+                Selected_Skin: selectedSkin.length > 0 ? selectedSkin[0].skin_id : null,
                 Capes: capeList,
-                Skin: skinList,
+                Skins: skinList.map(skin => ({
+                    uuid: skin.uuid,
+                    name: skin.name,
+                    capesid: skin.cloak_id
+                })),
                 Discord_integration: null,
                 Discord: {
                     Discord_Global_Name: "",

@@ -31,8 +31,10 @@ discord:
   enabled: true
   client_id: "1181148727826722816"
   secret_id: "5YaScJyKq0pDQxO_B5YlhUwcBnlkr37P"
-  scopes: "identify+email"
-  redirect_url: "http://localhost:34000/api/auth/discord"
+  scopes:
+    - identify
+    - email
+  redirect_url: "http://localhost:3000/api/discord/callback"
   bot: ""
   guild_id: 0
   role: 0
