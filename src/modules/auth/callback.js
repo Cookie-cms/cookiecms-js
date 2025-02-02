@@ -34,7 +34,7 @@ async function registerUser(userData) {
     }
 
     const [result] = await connection.query(
-        "INSERT INTO users (id, email, mail_verify) VALUES (?, ?, ?)",
+        "INSERT INTO users (id, mail, mail_verify) VALUES (?, ?, ?)",
         [userID, userData.email, 1]
     );
     connection.release();

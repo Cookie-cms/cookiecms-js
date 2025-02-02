@@ -35,7 +35,7 @@ discord:
   scopes:
     - identify
     - email
-  redirect_url: "http://localhost:3000/api/discord/callback"
+  redirect_url: "http://localhost:3000/callback"
   bot: ""
   guild_id: 0
   role: 0
