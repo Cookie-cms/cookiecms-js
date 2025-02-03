@@ -25,10 +25,11 @@ async function home(req, res) {
         const connection = await mysql.getConnection();
         const status = await isJwtExpiredOrBlacklisted(token, connection, JWT_SECRET_KEY);
 
-        if (!status) {
-            connection.release();
-            return res.status(401).json({ error: true, msg: 'Invalid JWT', code: 401 });
+        if (!status.valid) {
+            return res.status(401).json({ error: true, msg: status.message, code: 401 });
         }
+
+        // console.log('Status:', status);
 
         const [user] = await connection.query("SELECT * FROM users WHERE id = ?", [status.data.sub]);
 

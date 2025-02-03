@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import mysql from '../../inc/mysql.js';
 import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
+import { generateJwtToken } from '../../inc/jwtHelper.js';
+
 
 const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
@@ -63,9 +65,11 @@ async function login(req, res) {
                 iat: Math.floor(Date.now() / 1000),
                 exp: Math.floor(Date.now() / 1000) + 3600,
             };
+            console.log('Payload:', );
 
             try {
-                const token = jwt.sign(payload, JWT_SECRET_KEY, { algorithm: 'HS256' });
+                const userId = user[0].id;
+                const token = generateJwtToken(userId, JWT_SECRET_KEY);
 
                 connection.release();
                 return res.status(200).json({

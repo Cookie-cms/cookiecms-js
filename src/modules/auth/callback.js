@@ -6,17 +6,17 @@ import logger from '../../logger.js';
 import createResponse from '../../inc/_common.js';
 
 const config = readConfig();
-const JWT_SECRET_KEY = config.securecode;
 
 function generateToken(user) {
-    logger.info('SEC', JWT_SECRET_KEY);
+    const JWT_SECRET_KEY = config.securecode;
     const payload = {
         iss: config.NameSite,
-        sub: user.id,
+        sub: user?.user?.[0]?.id ?? null, // Correctly accessing the nested ID    
         iat: Math.floor(Date.now() / 1000),
         exp: Math.floor(Date.now() / 1000) + 3600,
     };
-    return jwt.sign(payload, JWT_SECRET_KEY, { algorithm: 'HS256' });
+    const token = jwt.sign(payload, JWT_SECRET_KEY, { algorithm: 'HS256' });
+    return token;
 }
 
 async function registerUser(userResponse, res) {
@@ -34,9 +34,13 @@ async function registerUser(userResponse, res) {
             }
         }
 
+        
+        const [user] = await connection.query("SELECT id FROM users WHERE dsid = ?", [userResponse.id]);
+
         connection.release();
 
-        const token = generateToken({ id: userResponse.id, username: userResponse.username });
+        const token = generateToken({user});
+        console.log('Token:', token);
 
         const userData = {
             id: userResponse.id,
@@ -58,6 +62,8 @@ async function registerUser(userResponse, res) {
 
 export async function discordCallback(req, res) {
     const code = req.query.code;
+    console.log("Отправка запроса с кодом:", code);
+
 
     if (!code) {
         return res.status(400).json({ error: 'No code provided' });
