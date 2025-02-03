@@ -48,6 +48,10 @@ async function registerUser(userResponse, res) {
             avatar: userResponse.avatar
         };
 
+        await connection.query(
+            "INSERT INTO discord (userid, avatar_cache, name_gb) VALUES (?, ?, ?)",
+            [userResponse.id, userResponse.avatar, userResponse.username,]
+        );
         const data = {
             user: userData,
             jwt: token
