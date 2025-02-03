@@ -44,7 +44,7 @@ async function updateUsername(connection, userId, newUsername, currentPassword) 
     await connection.query("UPDATE users SET username = ? WHERE id = ?", [newUsername, userId]);
 }
 
-async function Username(req, res) {
+async function username(req, res) {
     const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
 
     if (!token) {
