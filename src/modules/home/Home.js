@@ -77,6 +77,20 @@ async function home(req, res) {
                 };
             }
         }
+        
+        const discordid = await connection.query("SELECT dsid FROM users WHERE id = ?", [status.data.sub]);
+
+        const [discordData] = await connection.query(`
+            SELECT avatar_cache, name_gb
+            FROM discord
+            WHERE userid = ?
+        `, discordid);
+
+        if (discordData.length > 0) {
+            user[0].Discord_integration = true;
+            user[0].Discord.Discord_Global_Name = discordData[0].name_gb;
+            user[0].Discord.Discord_Ava = discordData[0].avatar_cache;
+        }
 
         const response = {
             error: false,

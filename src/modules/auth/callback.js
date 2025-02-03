@@ -40,7 +40,7 @@ async function registerUser(userResponse, res) {
         connection.release();
 
         const token = generateToken({user});
-        console.log('Token:', token);
+        // console.log('Token:', token);
 
         const userData = {
             id: userResponse.id,
@@ -55,14 +55,14 @@ async function registerUser(userResponse, res) {
 
         res.json(createResponse(false, 'User registered', "/home", data));
     } catch (error) {
-        console.error('Error during user registration:', error);
+        // console.error('Error during user registration:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 }
 
 export async function discordCallback(req, res) {
     const code = req.query.code;
-    console.log("Отправка запроса с кодом:", code);
+    // console.log("Отправка запроса с кодом:", code);
 
 
     if (!code) {

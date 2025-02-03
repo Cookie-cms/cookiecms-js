@@ -5,12 +5,12 @@ const config = readConfig();
 
 export async function isJwtExpiredOrBlacklisted(token, connection, JWT_SECRET_KEY) {
     try {
-        console.log('Token:', token);
-        console.log('JWT Secret Key:', JWT_SECRET_KEY);
+        // console.log('Token:', token);
+        // console.log('JWT Secret Key:', JWT_SECRET_KEY);
 
         // Verify and decode JWT
         const decoded = jwt.verify(token, JWT_SECRET_KEY);
-        console.log('Decoded Token:', decoded);
+        // console.log('Decoded Token:', decoded);
 
         // If verification fails, the function would have thrown an error already.
 
