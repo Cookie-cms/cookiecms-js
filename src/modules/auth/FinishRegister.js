@@ -17,10 +17,10 @@ async function finishRegister(req, res) {
         return res.status(400).json({ error: true, msg: 'Username is required.' });
     }
 
-    if (data.password) {
-        console.log("Password cannot be changed.");
-        return res.status(400).json({ error: true, msg: 'Password cannot be changed.' });
-    }
+    // if (!data.password) {
+    //     console.log("Password cannot be changed.");
+    //     return res.status(400).json({ error: true, msg: 'Password cannot be changed.' });
+    // }
 
     const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
 
