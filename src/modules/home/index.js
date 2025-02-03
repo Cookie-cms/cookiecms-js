@@ -1,9 +1,9 @@
-import home from './home.js';
-import upload from './upload.js';
-import username from './username.js';
-import editPassword from './password.js';
-import { requestMailCode, validateMailCode } from './mail.js';
-import editSkin from './skin.js';
+import home from './Home.js';
+import upload from './Upload.js';
+import username from './Username.js';
+import editPassword from './Password.js';
+import { requestMailCode, validateMailCode } from './Mail.js';
+import editSkin from './Skin.js';
 
 
 export default {
