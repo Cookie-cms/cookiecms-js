@@ -30,7 +30,7 @@ async function registerUser(userResponse, res) {
             if (config.discord.scopes.includes('email') && !userResponse.email) {
                 await connection.query("INSERT INTO users (id, dsid) VALUES (?, ?)", [userID, userResponse.id]);
             } else {
-                await connection.query("INSERT INTO users (id, dsid, mail) VALUES (?, ?, ?)", [userID, userResponse.id, userResponse.email]);
+                await connection.query("INSERT INTO users (id, dsid, mail, mail_verify) VALUES (?, ?, ?, 1)", [userID, userResponse.id, userResponse.email]);
             }
         }
 

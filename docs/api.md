@@ -1,6 +1,6 @@
 # **API Documentation**
 
-Actual on 16.12.2024
+Actual on 03.02.2025
 
 ### **Standard Response Format**
 
@@ -390,7 +390,7 @@ Password required (min 8 characters)
 ```
 
 ### **Edit User Details**
-`POST /api/home/edit`
+<!-- `POST /api/home/edit` -->
 
 **Request Headers**:
 - **Authorization**: Bearer `jwt_token`
@@ -405,49 +405,92 @@ Options can be:
 - `cape`
 - Upload skin via HTML form
 
-<details>
-<summary>Examples</summary>
-<br>
 
-- **Update Username and Password**:
-```
+`PATCH /api/home/edit/username`
+```json
 {
-    "action": "update_username",
     "username": "new_username",
     "password": "current_password"
 }
 ```
 
-- **Change Password**:
-```
-{
-    "action": "change_password",
-    "password": "current_password",
-    "new_password": "new_password"
-}
-```
-
-- **Change Cape**:
-```
-{
-    "action": "change_cape",
-    "cape": 1
-}
-```
-</details>
-
-
-<details>
-<summary>Mail example</summary>
-<br>
-1. **Update mail**
-
-- **100 Continue**
+`PATCH /api/home/edit/password`
 ```json
 {
-    "action": "update_mail",
+    "password": "current_password",
+    "newpassword": "new_password"
 }
 ```
+
+
+`POST /api/home/mail/request`
+```json
+{
+    "mail": "mail",
+    "password": "current_password",
+}
+```
+
+`POST /api/home/mail/validate`
+```json
+{
+    "code": "code",
+    "password": "current_password",
+}
+```
+
+`PATCH /api/home/edit/skin`
+```json
+{
+    "skinid": "uuid",
+    "name": "name",
+    "slim": true,
+    "cloakid": "uuid"
+}
+```
+
+`DELETE /api/home/edit/skin`
+```json
+{
+    "skinid": "uuid"
+}
+```
+**Response**:
+
+- **204 No Content**
+
+
+- **200 OK**:
+```
+{
+    "error": false,
+    "msg": "{Action} successfully",
+    "url": null,
+    "data": {}
+}
+```
+
+- **400 Bad Request**:
+```
+{
+    "error": true,
+    "msg": "{ Action error }",
+    "url": null,
+    "data": {}
+}
+```
+
+
+- **401 Unauthorized**:
+```
+{
+    "error": true,
+    "msg": "{ Action error }",
+    "url": null,
+    "data": {}
+}
+```
+
 
 #### **Upload Skins**
 `POST /api/home/edit/upload`
@@ -464,30 +507,11 @@ Options can be:
 ```
 
 
-- **100 Continue**
-```json
-{
-    "action": "update_mail_1",
-    "code": "",
-    "new_mail": "",
-    "password": ""
-}
-```
-
-- **100 Continue**
-```json
-{
-    "action": "update_mail_2",
-    "code": "",
-}
-```
-
-
-response
+**Response**:
 ```json
 {
     "error": false,
-    "msg": "{Action} successfully",
+    "msg": "Skin successfully uploaded.",
     "url": null,
     "data": {}
 }
@@ -503,31 +527,8 @@ response
     "data": {}
 }
 ```
-</details>
 
-**Response**:
-
-- **200 OK**:
-```
-{
-    "error": false,
-    "msg": "{Action} successfully",
-    "url": null,
-    "data": {}
-}
-```
-
-- **401 Unauthorized**:
-```
-{
-    "error": true,
-    "msg": "{ Action error }",
-    "url": null,
-    "data": {}
-}
-```
-
----
+<!-- ---
 
 ### **Verify Email**
 `POST /api/auth/verify-email`
@@ -564,7 +565,7 @@ response
 }
 ```
 
----
+--- -->
 
 ## **Discord Integration**
 
@@ -572,11 +573,42 @@ response
 
 parameters ?code=code
 
-+
+line
+1. get code
+2. get information about user
+3. check if user have connected account
+3.1. Send 200
+4. return 400 and give chance to create account
 
 
+**Response**:
 
-### **Discord Integration Settings**
+- **200 OK**:
+```json
+{
+    "error": false,
+    "msg": "Seccessfully logged in",
+    "url": "/home",  
+    "data": {
+        "jwt": "string",
+        "userid": "discord id user",
+        "username": "discord username global",
+        "avatar": "discord avatar cache"
+    }
+}
+```
+
+- **404 Not found**:
+```json
+{
+    "error": false,
+    "msg": "We dont find your account, Do you want create or connect?",
+    "url": "/discord-connect",  
+    "data": {}
+}
+```
+
+<!-- ### **Discord Integration Settings**
 `POST /home/discord`
 
 **Request Body**:
@@ -609,7 +641,7 @@ parameters ?code=code
 }
 ```
 
----
+--- -->
 
 ## **Admin Endpoints**
 
@@ -1036,7 +1068,7 @@ AuditSecret:
 
 
 
-
+<!-- 
 # BugScout
 
 ## **Logger for console**
@@ -1064,4 +1096,4 @@ execute and get information which returned
 {
     "data": "tables or {name_of_table}" 
 }
-```
+``` -->

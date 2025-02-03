@@ -33,7 +33,17 @@ router.get('/auth/discord/link', auth.generateAuthLink);
 // Home
 router.get('/home',  home.home);
 
-// router.post('/home/edit', home.edit);
+router.put('/home/edit/username', home.edit);
+
+router.put('/home/edit/password', home.edit);
+
+router.post('/home/edit/mail/request', home.edit);
+
+router.post('/home/edit/mail/validate', home.edit);
+
+router.put('/home/edit/skin', home.edit);
+
+router.delete('/home/edit/skin', home.edit);
 
 router.post('/home/upload', uploadMulter.single('file'), home.upload);
 
@@ -63,6 +73,8 @@ router.get('/skin/{uuid}', (req, res) => {
 router.get('/cape/{uuid}', (req, res) => {
     res.send('Welcome to the Express app!');
 });
+
+
 
 
 

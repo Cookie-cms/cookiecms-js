@@ -37,8 +37,8 @@ async function home(req, res) {
             connection.release();
             const response = {
                 data: {
-                    username_create: !user[0].username,
-                    password_create: !user[0].password
+                    username_create: user[0].username,
+                    password_create: user[0].password
                 }
             };
             return res.status(401).json({ error: true, msg: 'Your account is not finished', code: 401, url: '/login', data: response });
