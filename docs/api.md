@@ -439,7 +439,7 @@ Options can be:
 }
 ```
 
-`PATCH /api/home/edit/skin`
+`POST /api/home/edit/skin`
 ```json
 {
     "skinid": "uuid",
