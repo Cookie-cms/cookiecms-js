@@ -60,6 +60,11 @@ async function finishRegister(req, res) {
         const newUuid = uuidv4();
         await connection.query("UPDATE users SET uuid = ?, username = ? WHERE id = ?", [newUuid, data.username, userId]);
 
+        if (data.password) {
+            const hashedPassword = await bcrypt.hash(data.password, 10);
+            await connection.query("UPDATE users SET password = ? WHERE id = ?", [hashedPassword, userId]);
+        }
+
         const affectedRows = await connection.query("SELECT ROW_COUNT() AS affectedRows");
         console.log("User update affected rows: " + affectedRows[0].affectedRows);
         if (affectedRows[0].affectedRows > 0) {
