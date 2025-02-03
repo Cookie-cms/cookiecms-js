@@ -5,9 +5,7 @@ import mysql from './inc/mysql.js';
 import cors from 'cors';
 import createResponse from './inc/_common.js';
 
-export default {
-    createResponse
-}
+export default { createResponse };
 
 const app = express();
 
@@ -41,8 +39,20 @@ app.use((req, res, next) => {
 
 app.use('/api', routes);
 
-
 const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     logger.info(`Server is running on port http://localhost:${PORT}`);
 });
+
+// === Обработчики завершения процесса ===
+const shutdown = () => {
+    logger.info('Shutting down server...');
+    server.close(() => {
+        logger.info('Server closed.');
+        process.exit(0);
+    });
+};
+
+process.on('SIGINT', shutdown);  // Ctrl+C
+process.on('SIGTERM', shutdown); // Команда `kill`
+process.on('exit', shutdown);

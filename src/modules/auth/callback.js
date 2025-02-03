@@ -42,16 +42,36 @@ async function registerUser(userResponse, res) {
         const token = generateToken({user});
         // console.log('Token:', token);
 
+
+        const randomCode = Math.floor(Math.random() * 99) + 1;
+        const timexp = Math.floor(Date.now() / 1000) + 3600;
+    
+        console.log('Existing user:', existingUser);
+
+            if (existingUser.length > 0) {
+                // User already exists, update the existing record
+                console.log('Updating existing user:', userResponse.id);
+                await connection.query(
+                    "UPDATE discord SET avatar_cache = ?, name_gb = ?, conn_id = ?, expire = ? WHERE userid = ?",
+                    [userResponse.avatar, userResponse.username, randomCode, timexp, userResponse.id]
+                );
+            } else {
+                console.log('Inserting new user:', userResponse.id);
+                // User does not exist, insert a new record
+                await connection.query(
+                    "INSERT INTO discord (userid, avatar_cache, name_gb, conn_id, expire) VALUES (?, ?, ?, ?, ?)",
+                    [userResponse.id, userResponse.avatar, userResponse.username, randomCode, timexp]
+                );
+            }
+        
+        
+       
         const userData = {
             id: userResponse.id,
             username: userResponse.username,
-            avatar: userResponse.avatar
+            avatar: userResponse.avatar,
+            conn_id: randomCode
         };
-
-        await connection.query(
-            "INSERT INTO discord (userid, avatar_cache, name_gb) VALUES (?, ?, ?)",
-            [userResponse.id, userResponse.avatar, userResponse.username,]
-        );
         const data = {
             user: userData,
             jwt: token
@@ -66,7 +86,7 @@ async function registerUser(userResponse, res) {
 
 export async function discordCallback(req, res) {
     const code = req.query.code;
-    // console.log("Отправка запроса с кодом:", code);
+    console.log("Отправка запроса с кодом:", code);
 
 
     if (!code) {
