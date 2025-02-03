@@ -1,10 +1,9 @@
 import home from './Home.js';
-// import editProfile from './Edit.js';
-import upload from './upload.js';
-import username from './username.js';
-import editPassword from './password.js';
-// import {  } from './mail.js';
-import skin from './skin.js';
+import upload from './Upload.js';
+import username from './Username.js';
+import editPassword from './EditPassword.js';
+import { requestMailCode, validateMailCode } from './mail.js';
+import editSkin from './skin.js';
 
 
 export default {
@@ -12,5 +11,7 @@ export default {
     upload,
     username,
     editPassword,
-    
+    requestMailCode,
+    validateMailCode,
+    editSkin
 };
