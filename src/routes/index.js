@@ -17,6 +17,7 @@ router.post('/auth/forgetpass/validate', auth.validate_code_fp);
 router.post('/auth/forgetpass/update', auth.updatepass);
 router.get('/auth/discord/callback', auth.discordCallback);
 router.get('/auth/discord/link', auth.generateAuthLink);
+router.post('/auth/register/discord', auth.discordcreate);
 
 // Home routes
 router.get('/home', home.home);
