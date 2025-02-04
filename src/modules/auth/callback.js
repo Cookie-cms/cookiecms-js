@@ -42,13 +42,15 @@ async function registerUser(userResponse, res) {
         // const token = generateToken({user});
         // console.log('Token:', token);
 
+        const [discord_inf] = await connection.query("SELECT * FROM discord WHERE userid = ?", [userResponse.id]);
+
 
         const randomCode = Math.floor(Math.random() * 99) + 1;
         const timexp = Math.floor(Date.now() / 1000) + 3600;
     
-        console.log('Existing user:', existingUser);
+        console.log('Existing user:', discord_inf);
 
-            if (existingUser.length > 0) {
+            if (discord_inf.length > 0) {
                 // User already exists, update the existing record
                 console.log('Updating existing user:', userResponse.id);
                 await connection.query(
