@@ -1,5 +1,4 @@
 import oauth from '@cookie-cms/oauth2-discord';
-  // Import the packageimport readConfig from '../../inc/yamlReader.js';
 import jwt from 'jsonwebtoken';
 import mysql from '../../inc/mysql.js';
 import logger from '../../logger.js';
