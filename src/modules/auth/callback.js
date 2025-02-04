@@ -25,22 +25,22 @@ async function registerUser(userResponse, res) {
         const connection = await mysql.getConnection();
         const [existingUser] = await connection.query("SELECT id FROM users WHERE dsid = ?", [userResponse.id]);
 
-        if (existingUser.length === 0) {
-            const userID = Math.floor(Math.random() * 1000000000000000); // Generate a random user ID within a safe range
+        // if (existingUser.length === 0) {
+        //     const userID = Math.floor(Math.random() * (999999999999999999 - 1 + 1)) + 1;
 
-            if (config.discord.scopes.includes('email') && !userResponse.email) {
-                await connection.query("INSERT INTO users (id, dsid) VALUES (?, ?)", [userID, userResponse.id]);
-            } else {
-                await connection.query("INSERT INTO users (id, dsid, mail, mail_verify) VALUES (?, ?, ?, 1)", [userID, userResponse.id, userResponse.email]);
-            }
-        }
+        //     if (config.discord.scopes.includes('email') && !userResponse.email) {
+        //         await connection.query("INSERT INTO users (id, dsid) VALUES (?, ?)", [userID, userResponse.id]);
+        //     } else {
+        //         await connection.query("INSERT INTO users (id, dsid, mail, mail_verify) VALUES (?, ?, ?, 1)", [userID, userResponse.id, userResponse.email]);
+        //     }
+        // }
 
         
         const [user] = await connection.query("SELECT id FROM users WHERE dsid = ?", [userResponse.id]);
 
         connection.release();
 
-        const token = generateToken({user});
+        // const token = generateToken({user});
         // console.log('Token:', token);
 
 
