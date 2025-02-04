@@ -3,7 +3,6 @@ import mysql from '../../inc/mysql.js';
 import jwt from 'jsonwebtoken';
 import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
-import User from 'discord-oauth2-api/classes/user.js';
 
 const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;

@@ -1,9 +1,10 @@
-import discordOAuth from '../../inc/discordoauth.js';
-import readConfig from '../../inc/yamlReader.js';
+import oauth from '@cookie-cms/oauth2-discord';
+  // Import the packageimport readConfig from '../../inc/yamlReader.js';
 import jwt from 'jsonwebtoken';
 import mysql from '../../inc/mysql.js';
 import logger from '../../logger.js';
 import createResponse from '../../inc/_common.js';
+import readConfig from '../../inc/yamlReader.js';
 
 const config = readConfig();
 
@@ -74,12 +75,12 @@ async function registerUser(userResponse, res) {
         };
         const data = {
             user: userData,
-            jwt: token
+            // jwt: token
         };
 
-        res.json(createResponse(false, 'User registered', "/home", data));
+        res.status(404).json(createResponse(true, 'User not found, do you want create or link?', "/home", data));
     } catch (error) {
-        // console.error('Error during user registration:', error);
+        console.error('Error during user registration:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 }
@@ -94,7 +95,7 @@ export async function discordCallback(req, res) {
     }
 
     try {
-        const tokenResponse = await discordOAuth.initOAuth(
+        const tokenResponse = await oauth.initOAuth(
             config.discord.redirect_url,
             config.discord.client_id,
             config.discord.secret_id,
@@ -102,7 +103,7 @@ export async function discordCallback(req, res) {
         );
 
         // console.info('Token response:', tokenResponse);
-        const userResponse = await discordOAuth.getUser(tokenResponse.access_token);
+        const userResponse = await oauth.getUser(tokenResponse.access_token);
         // console.info('User response:', userResponse.id);
         // console.info('User response:', userResponse);
         // Register the user and generate a token

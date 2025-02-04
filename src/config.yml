@@ -31,7 +31,7 @@ smtp:
 discord:
   enabled: true
   client_id: "1181148727826722816"
-  secret_id: "5YaScJyKq0pDQxO_B5YlhUwcBnlkr37P"
+  secret_id: "kl-yQ-6Sa1LE23-o-QhLB_Ny9aSttURp"
   scopes:
     - identify
     - email

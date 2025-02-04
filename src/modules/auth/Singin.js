@@ -23,7 +23,7 @@ function isEmail(input) {
 }
 
 async function login(req, res) {
-    const { username, password } = req.body;
+    const { username, password, meta } = req.body;
 
     if (!username || !password) {
         return res.status(400).json({ error: true, msg: 'Username or password not provided' });
@@ -58,7 +58,39 @@ async function login(req, res) {
         }
 
         const passwordMatch = await bcrypt.compare(validatedPassword, user[0].password);
+
+        
         if (passwordMatch) {
+            if (meta) {
+
+                if (!meta.id || !meta.conn_id) {
+                    return res.status(400).json({ error: true, msg: 'id or conn_id not provided' });
+                }
+
+                    // Step 1: Verify if this game account is not already connected to another Discord account
+                const query = "SELECT dsid FROM users WHERE id = ?";
+                const [discord] = await connection.query(query, [user[0].id]);
+
+                if (discord.length > 0 && discord[0].dsid && discord[0].dsid !== meta.id) {
+                    console.log('Discord:', discord[0].dsid, 'Meta:', meta.id);
+                    connection.release();
+                    return res.status(403).json({ error: true, msg: 'This game account is already linked to another Discord account' });
+                }
+    
+
+                // Step 2: Check if the conn_id matches
+                const [discord_link] = await connection.query("SELECT * FROM discord WHERE userid = ?", [meta.id]);
+                if (discord_link.length === 0 || discord_link[0].conn_id !== meta.conn_id) {
+                    console.log('Discord:', discord_link[0].conn_id, 'Meta:', conn_id, 'Discord:', discord_link);
+                    connection.release();
+                    return res.status(404).json({ error: true, msg: 'Account cannot be connected' });
+                }
+
+                // Step 3: Update the MySQL database
+                await connection.query("UPDATE users SET dsid = ? WHERE id = ?", [meta.id, user[0].id]);
+
+            }
+    
             const payload = {
                 iss: config.NameSite,
                 sub: user[0].id,

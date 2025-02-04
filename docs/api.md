@@ -601,12 +601,66 @@ line
 - **404 Not found**:
 ```json
 {
+  "error": true,
+  "msg": "User not found, do you want create or link?",
+  "url": null,
+  "data": {
+    "user": {
+      "id": "id",
+      "username": "name",
+      "avatar": "cache",
+      "conn_id": 0
+    }
+  }
+}
+```
+
+
+User can create account or link account
+
+
+link via login
+```json
+{
+    "username": "string",
+    "password": "string",
+    "meta": {
+        "id": "string",
+        "conn_id": 0
+    }
+}
+```
+
+
+
+- **200 OK**:
+```json
+{
     "error": false,
-    "msg": "We dont find your account, Do you want create or connect?",
-    "url": "/discord-connect",  
+    "msg": "Account linked",
+    "url": "/home",  
+    "data": {
+        "jwt": "string",
+        "userid": "discord id user",
+        "username": "discord username global",
+        "avatar": "discord avatar cache"
+    }
+}
+```
+
+- **409 Conflict**:
+```json
+{
+    "error": true,
+    "msg": "This game account already linked to another discord account",
+    "url": null,
     "data": {}
 }
 ```
+
+
+
+
 
 <!-- ### **Discord Integration Settings**
 `POST /home/discord`

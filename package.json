@@ -9,16 +9,14 @@
     "dev": "nodemon src/app.js"
   },
   "dependencies": {
+    "@cookie-cms/oauth2-discord": "npm:@Cookie-cms/oauth2-discord@^0.0.1",
     "axios": "^1.7.9",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
-    "discord-oauth2": "^2.12.1",
-    "discord-oauth2-api": "^1.1.2",
     "express": "latest",
     "jimp": "^1.6.0",
     "js-yaml": "^4.1.0",
     "jsonwebtoken": "^9.0.2",
-    "module-alias": "^2.2.3",
     "multer": "^1.4.5-lts.1",
     "mysql": "^2.18.1",
     "mysql2": "^3.12.0",
