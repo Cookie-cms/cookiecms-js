@@ -65,7 +65,7 @@ async function registerUser(userResponse, res) {
         connection.release();
 
         const registerData = {
-            id: userResponse.id,
+            userid: userResponse.id,
             username: userResponse.username,
             avatar: userResponse.avatar,
             conn_id: randomCode,
@@ -73,7 +73,7 @@ async function registerUser(userResponse, res) {
 
         const userData = {
             jwt: generateToken(existingUser.id),
-            id: userResponse.id,
+            userid: userResponse.id,
             username: userResponse.username,
             avatar: userResponse.avatar,
             conn_id: randomCode,
