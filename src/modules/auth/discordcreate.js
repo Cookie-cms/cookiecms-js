@@ -35,14 +35,16 @@ export async function discordcreate(req, res) {
         // }
 
         const [discord_link] = await connection.query("SELECT * FROM discord WHERE userid = ?", [meta.id]);
+        // console.log('Discord:', discord_link[0].conn_id, 'Meta:', meta.conn_id, 'Discord:', discord_link);
         if (discord_link.length === 0 || discord_link[0].conn_id !== meta.conn_id) {
             console.log('Discord:', discord_link[0].conn_id, 'Meta:', conn_id, 'Discord:', discord_link);
             connection.release();
             return res.status(404).json({ error: true, msg: 'Account cannot be connected' });
         }
-
-        if (discord_link.mail) {
-            await connection.query("INSERT INTO users (id, dsid, mail, mail_verify) VALUES (?, ?, ?, 1)", [userID, meta.id, meta.mail]);            
+        // console.log('Discord:', discord_link[0].mail);
+        if (discord_link[0].mail) {
+            console.log('Discord:', discord_link[0].mail);
+            await connection.query("INSERT INTO users (id, dsid, mail, mail_verify) VALUES (?, ?, ?, 1)", [userID, meta.id, discord_link[0].mail]);            
         } else {
             await connection.query("INSERT INTO users (id, dsid) VALUES (?, ?)", [userID, meta.id]);
         }
