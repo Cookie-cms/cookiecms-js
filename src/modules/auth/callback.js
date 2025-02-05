@@ -64,26 +64,24 @@ async function registerUser(userResponse, res) {
 
         connection.release();
 
-        const registerData = {
-            userid: userResponse.id,
-            username: userResponse.username,
-            avatar: userResponse.avatar,
-            conn_id: randomCode,
-        };
-
-        const userData = {
-            jwt: generateToken(existingUser.id),
-            userid: userResponse.id,
-            username: userResponse.username,
-            avatar: userResponse.avatar,
-            conn_id: randomCode,
-        };
-
-        const responseMessage = existingUser
-            ? createResponse(false, 'Seccessfully logged in', "/home", userData)
-            : createResponse(true, 'User not found, do you want to create or link?', "/home", registerData);
-
-        res.status(existingUser ? 200 : 404).json(responseMessage);
+        if (existingUser) {
+            const userData = {
+                jwt: generateToken(existingUser.id),
+                userid: userResponse.id,
+                username: userResponse.username,
+                avatar: userResponse.avatar,
+                conn_id: randomCode,
+            };
+            res.status(200).json(createResponse(false, 'Successfully logged in', "/home", userData));
+        } else {
+            const registerData = {
+                userid: userResponse.id,
+                username: userResponse.username,
+                avatar: userResponse.avatar,
+                conn_id: randomCode,
+            };
+            res.status(404).json(createResponse(true, 'User not found, do you want to create or link?', "/home", registerData));
+        }
     } catch (error) {
         console.error('Error during user registration:', error);
         res.status(500).json({ error: 'Internal Server Error' });
