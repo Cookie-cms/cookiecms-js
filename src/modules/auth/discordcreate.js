@@ -25,6 +25,7 @@ export async function discordcreate(req, res) {
 
     try {
         const connection = await pool.getConnection();        
+        const JWT_SECRET_KEY = config.securecode;
 
         // const [existingUser] = await connection.query("SELECT * FROM users WHERE BINARY mail = ?", [validatedMail]);
 
@@ -41,14 +42,11 @@ export async function discordcreate(req, res) {
         }
 
         if (discord_link.mail) {
-            await connection.query("INSERT INTO users (id, dsid, mail, mail_verify) VALUES (?, ?, ?, 1)", [userID, meta.id, meta.mail]);
-            const token = generateJwtToken(userId, JWT_SECRET_KEY);
-            
+            await connection.query("INSERT INTO users (id, dsid, mail, mail_verify) VALUES (?, ?, ?, 1)", [userID, meta.id, meta.mail]);            
         } else {
             await connection.query("INSERT INTO users (id, dsid) VALUES (?, ?)", [userID, meta.id]);
-            const token = generateJwtToken(userId, JWT_SECRET_KEY);
-            
         }
+        const token = generateJwtToken(userID, JWT_SECRET_KEY);
 
         connection.release();
         return res.status(200).json({ 

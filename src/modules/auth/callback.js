@@ -35,7 +35,7 @@ async function registerUser(userResponse, res) {
         // }
 
         
-        const [user] = await connection.query("SELECT id FROM users WHERE dsid = ?", [userResponse.id]);
+        // const [user] = await connection.query("SELECT id FROM users WHERE dsid = ?", [userResponse.id]);
 
         connection.release();
 
@@ -53,17 +53,34 @@ async function registerUser(userResponse, res) {
             if (discord_inf.length > 0) {
                 // User already exists, update the existing record
                 console.log('Updating existing user:', userResponse.id);
-                await connection.query(
-                    "UPDATE discord SET avatar_cache = ?, name_gb = ?, conn_id = ?, expire = ? WHERE userid = ?",
-                    [userResponse.avatar, userResponse.username, randomCode, timexp, userResponse.id]
-                );
+
+                if(userResponse.mail) {
+                    await connection.query(
+                        "UPDATE discord SET avatar_cache = ?, name_gb = ?, conn_id = ?, expire = ?, mail = ? WHERE userid = ?",
+                        [userResponse.avatar, userResponse.username, randomCode, timexp, userResponse.id, userResponse.mail]
+                    );
+                } else {
+                    await connection.query(
+                        "UPDATE discord SET avatar_cache = ?, name_gb = ?, conn_id = ?, expire = ? WHERE userid = ?",
+                        [userResponse.avatar, userResponse.username, randomCode, timexp, userResponse.id]
+                    );
+                }
+
+                
             } else {
                 console.log('Inserting new user:', userResponse.id);
                 // User does not exist, insert a new record
-                await connection.query(
-                    "INSERT INTO discord (userid, avatar_cache, name_gb, conn_id, expire) VALUES (?, ?, ?, ?, ?)",
-                    [userResponse.id, userResponse.avatar, userResponse.username, randomCode, timexp]
-                );
+                if(userResponse.mail) {
+                    await connection.query(
+                        "UPDATE discord SET avatar_cache = ?, name_gb = ?, conn_id = ?, expire = ?, mail = ? WHERE userid = ?",
+                        [userResponse.avatar, userResponse.username, randomCode, timexp, userResponse.id, userResponse.mail]
+                    );
+                } else {
+                    await connection.query(
+                        "UPDATE discord SET avatar_cache = ?, name_gb = ?, conn_id = ?, expire = ? WHERE userid = ?",
+                        [userResponse.avatar, userResponse.username, randomCode, timexp, userResponse.id]
+                    );
+                }
             }
         
         
