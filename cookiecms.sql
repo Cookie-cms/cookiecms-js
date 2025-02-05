@@ -14,6 +14,7 @@ CREATE TABLE `discord` (
   `userid` bigint NOT NULL,
   `avatar_cache` varchar(256) NOT NULL,
   `name_gb` varchar(256) NOT NULL,
+  `mail` varchar(256) NOT NULL,
   `conn_id` int NOT NULL,
   `expire` bigint NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
