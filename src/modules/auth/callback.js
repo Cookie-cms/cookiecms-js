@@ -64,7 +64,15 @@ async function registerUser(userResponse, res) {
 
         connection.release();
 
+        const registerData = {
+            id: userResponse.id,
+            username: userResponse.username,
+            avatar: userResponse.avatar,
+            conn_id: randomCode,
+        };
+
         const userData = {
+            jwt: generateToken(existingUser.id),
             id: userResponse.id,
             username: userResponse.username,
             avatar: userResponse.avatar,
@@ -72,8 +80,8 @@ async function registerUser(userResponse, res) {
         };
 
         const responseMessage = existingUser
-            ? createResponse(false, 'Logged in', "/home", { user: userData })
-            : createResponse(true, 'User not found, do you want to create or link?', "/home", { user: userData });
+            ? createResponse(false, 'Seccessfully logged in', "/home", userData)
+            : createResponse(true, 'User not found, do you want to create or link?', "/home", registerData);
 
         res.status(existingUser ? 200 : 404).json(responseMessage);
     } catch (error) {
