@@ -26,12 +26,12 @@ export async function discordcreate(req, res) {
     try {
         const connection = await pool.getConnection();        
 
-        const [existingUser] = await connection.query("SELECT * FROM users WHERE BINARY mail = ?", [validatedMail]);
+        // const [existingUser] = await connection.query("SELECT * FROM users WHERE BINARY mail = ?", [validatedMail]);
 
-        if (existingUser.length > 0) {
-            connection.release();
-            return res.status(409).json({ error: true, msg: "Email is already registered." });
-        }
+        // if (existingUser.length > 0) {
+        //     connection.release();
+        //     return res.status(409).json({ error: true, msg: "Email is already registered." });
+        // }
 
         const [discord_link] = await connection.query("SELECT * FROM discord WHERE userid = ?", [meta.id]);
         if (discord_link.length === 0 || discord_link[0].conn_id !== meta.conn_id) {
