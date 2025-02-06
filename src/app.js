@@ -9,7 +9,9 @@ export default { createResponse };
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:3000'
+}));
 
 mysql.getConnection((err, connection) => {
     if (err) {

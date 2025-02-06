@@ -1,18 +1,9 @@
 import mysql from '../../inc/mysql.js';
-import readConfig from '../../inc/yamlReader.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
+import readConfig from '../../inc/yamlReader.js';
 
-const config = readConfig(process.env.CONFIG_PATH || '../config.yml');
+const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
-
-async function getUserSkins(connection, userId) {
-    const [skins] = await connection.query(`
-        SELECT skins_library.uuid, skins_library.name, IFNULL(skins_library.cloak_id, 0) AS cloak_id
-        FROM skins_library
-        WHERE skins_library.ownerid = ?
-    `, [userId]);
-    return skins;
-}
 
 async function home(req, res) {
     const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
@@ -26,18 +17,18 @@ async function home(req, res) {
         const status = await isJwtExpiredOrBlacklisted(token, connection, JWT_SECRET_KEY);
 
         if (!status.valid) {
+            connection.release();
             return res.status(401).json({ error: true, msg: status.message, code: 401 });
         }
 
-        // console.log('Status:', status);
-
-        const [user] = await connection.query("SELECT * FROM users WHERE id = ?", [status.data.sub]);
+        const userId = status.data.sub;
+        const [user] = await connection.query("SELECT * FROM users WHERE id = ?", [userId]);
 
         if (!user.length || !user[0].username || !user[0].uuid || !user[0].password) {
             connection.release();
             const response = {
-                    username_create: !user[0].username,
-                    password_create: !user[0].password
+                username_create: !user[0].username,
+                password_create: !user[0].password
             };
             return res.status(401).json({ error: true, msg: 'Your account is not finished', code: 401, url: '/login', data: response });
         }
@@ -47,16 +38,16 @@ async function home(req, res) {
             FROM skin_user
             JOIN skins_library ON skin_user.skin_id = skins_library.uuid
             WHERE skin_user.uid = ?
-        `, [status.data.sub]);
+        `, [userId]);
+
+        console.log(selectedSkin);
 
         const [capes] = await connection.query(`
             SELECT cloaks_lib.uuid AS id, cloaks_lib.name
             FROM cloaks_users
             JOIN cloaks_lib ON cloaks_users.cloak_id = cloaks_lib.uuid
             WHERE cloaks_users.uid = ?
-        `, [status.data.sub]);
-
-        const skinList = await getUserSkins(connection, status.data.sub);
+        `, [userId]);
 
         const capeList = capes.length > 0 ? capes.map(cape => ({
             Id: cape.id,
@@ -77,49 +68,54 @@ async function home(req, res) {
                 };
             }
         }
-        
-        const discordid = await connection.query("SELECT dsid FROM users WHERE id = ?", [status.data.sub]);
 
-        const [discordData] = await connection.query(`
-            SELECT avatar_cache, name_gb
-            FROM discord
-            WHERE userid = ?
-        `, discordid);
+        const [discordid] = await connection.query("SELECT dsid FROM users WHERE id = ?", [userId]);
 
-        if (discordData.length > 0) {
-            user[0].Discord_integration = true;
-            user[0].Discord.Discord_Global_Name = discordData[0].name_gb;
-            user[0].Discord.Discord_Ava = discordData[0].avatar_cache;
+        let discordIntegration = false;
+        let discordData = {
+            Discord_Global_Name: "",
+            Discord_Ava: ""
+        };
+
+        if (discordid.length > 0) {
+            const [discordInfo] = await connection.query("SELECT * FROM discord WHERE userid = ?", [discordid[0].dsid]);
+
+            if (discordInfo.length > 0) {
+                discordIntegration = true;
+                discordData = {
+                    Discord_Global_Name: discordInfo[0].name_gb,
+                    Discord_Ava: discordInfo[0].avatar_cache
+                };
+            }
         }
 
-        const response = {
+        connection.release();
+
+        const userdata = {
             error: false,
-            msg: "",
+            msg: "Home data fetched successfully",
             url: null,
             data: {
                 Username: user[0].username,
                 Uuid: user[0].uuid,
-                Selected_Skin: selectedSkin.length > 0 ? selectedSkin[0].skin_id : null,
+                Selected_Cape: selectedCape ? selectedCape.Id : 0,
+                Selected_Skin: selectedSkin.length > 0 ? selectedSkin[0].skin_id : 0,
+                PermLvl: user[0].perms,
                 Capes: capeList,
-                Skins: skinList.map(skin => ({
-                    uuid: skin.uuid,
-                    name: skin.name,
-                    capesid: skin.cloak_id
-                })),
-                Discord_integration: null,
-                Discord: {
-                    Discord_Global_Name: "",
-                    Discord_Ava: ""
-                },
-                Mail_verification: user[0].mail_verify
+                Skins: selectedSkin.length > 0 ? [{
+                    Id: selectedSkin[0].skin_id,
+                    Name: selectedSkin[0].skin_name
+                }] : [],
+                Discord_integration: discordIntegration,
+                Discord: discordData,
+                Mail_verification: user[0].mail_verify === 1
             }
         };
 
-        connection.release();
-        return res.status(200).json(response);
-    } catch (err) {
-        console.error("[ERROR] MySQL Error: ", err);
-        return res.status(500).json({ error: true, msg: 'An error occurred. Please try again later.' });
+        res.status(200).json(userdata);
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 }
 
