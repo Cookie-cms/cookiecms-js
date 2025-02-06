@@ -63,7 +63,7 @@ async function initDB() {
 
     // Insert data into the users table (assuming a `users` table exists)
     const [result] = await pool.execute(
-      'INSERT INTO users (id, username, password, mail, dsid, mail_verify, uuid) VALUES (?, ?, ?, ?, ?, 1)',
+      'INSERT INTO users (id, username, password, mail, dsid, mail_verify, uuid) VALUES (?, ?, ?, ?, ?, 1, ?)',
       [userID, username, hashedPassword, email, discord_id, user_uuid]
     );
 
@@ -87,6 +87,8 @@ async function initDB() {
 
     // Optionally, you can import data from a SQL file (like `cookiecms-seed.sql`)
 
+    process.exit(0);
+    // Close the connection pool
   } catch (error) {
     console.error('Error:', error);
   }
