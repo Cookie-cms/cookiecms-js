@@ -108,3 +108,8 @@ build/
 # Temporary folders
 tmp/
 temp/
+
+# my files
+pushgit.sh
+pushgit.json
+uploads/

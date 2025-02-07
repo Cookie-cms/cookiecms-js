@@ -29,7 +29,7 @@ router.delete('/home/edit/skin', home.editSkin);
 router.post('/home/upload', home.upload);
 
 // Admin routes
-router.get('/admin/users', (req, res) => {
+router.get('/api/admin/users', (req, res) => {
     res.send('Welcome to the Express app!');
 });
 router.get('/admin/user', (req, res) => {
@@ -38,16 +38,47 @@ router.get('/admin/user', (req, res) => {
 router.post('/admin/user', (req, res) => {
     res.send('Welcome to the Express app!');
 });
+router.post('/admin/mail', (req, res) => {
+    res.send('Welcome to the Express app!');
+});
+router.post('/admin/user/role/:id', (req, res) => {
+    res.send('Welcome to the Express app!');
+});
+router.post('/admin/user/cape/:id', (req, res) => {
+    res.send('Welcome to the Express app!');
+});
+
+
+
+// Skins routes
+router.get('/skin/gravitlauncher/:uuid', (req, res) => {
+    res.send('Welcome to the Express app!');
+});
+
+router.get('/skin/head/:uuid', (req, res) => {
+    res.send('Welcome to the Express app!');
+});
+
+router.get('/skin/body/:uuid', (req, res) => {
+    res.send('Welcome to the Express app!');
+});
+
+router.get('/skin/cloack/:idcloak', (req, res) => {
+    res.send('Welcome to the Express app!');
+});
+
+router.get('/skin/standart/:uuid', (req, res) => {
+    res.send('Welcome to the Express app!');
+});
+
+router.get('/skin/standart/cape/:uuid', (req, res) => {
+    res.send('Welcome to the Express app!');
+});
 
 // Service routes
-router.get('/service/user', (req, res) => {
+router.post('/service/user', (req, res) => {
     res.send('Welcome to the Express app!');
 });
-router.get('/skin/:uuid', (req, res) => {
-    res.send('Welcome to the Express app!');
-});
-router.get('/cape/:uuid', (req, res) => {
-    res.send('Welcome to the Express app!');
-});
+
 
 export default router;

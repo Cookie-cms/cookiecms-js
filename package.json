@@ -1,6 +1,6 @@
 {
   "name": "cookiecms",
-  "version": "0.1.19",
+  "version": "0.3.30",
   "description": "CookieCMS",
   "main": "src/app.js",
   "type": "module",
