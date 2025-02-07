@@ -58,15 +58,16 @@ async function initDB() {
     // Hash the password for secure storage
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const userID = Math.floor(Math.random() * (999999999999999999 - 1 + 1)) + 1;
     const user_uuid = uuidv4();
 
     // Insert data into the users table (assuming a `users` table exists)
     const [result] = await pool.execute(
-      'INSERT INTO users (id, username, password, mail, dsid, mail_verify, uuid) VALUES (?, ?, ?, ?, ?, 1, ?)',
-      [userID, username, hashedPassword, email, discord_id, user_uuid]
+      'INSERT INTO users (username, password, mail, dsid, mail_verify, uuid) VALUES (?, ?, ?, ?, 1, ?)',
+      [username, hashedPassword, email, discord_id, user_uuid]
     );
-
+    
+    const userID = result.insertId;
+    
     const Skinid = uuidv4();
     const Cloak_id_one = uuidv4();
     const Cloak_id_second = uuidv4();

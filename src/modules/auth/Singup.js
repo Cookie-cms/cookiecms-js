@@ -42,10 +42,11 @@ export async function signup(req, res) {
             return res.status(409).json({ error: true, msg: "Email is already registered." });
         }
 
-        const userID = Math.floor(Math.random() * (999999999999999999 - 1 + 1)) + 1;
         const hashedPassword = await bcrypt.hash(validatedPassword, 10);
 
-        await connection.query("INSERT INTO users (id, mail, password) VALUES (?, ?, ?)", [userID, validatedMail, hashedPassword]);
+        const [result] = await connection.query("INSERT INTO users (mail, password) VALUES (?, ?)", [validatedMail, hashedPassword]);
+
+        const userID = result.insertId;
 
         await sendEmbed(mail);
 

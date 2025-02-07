@@ -5,6 +5,15 @@ import readConfig from '../../inc/yamlReader.js';
 const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
 
+async function getUserSkins(connection, userId) {
+    const [skins] = await connection.query(`
+        SELECT skins_library.uuid, skins_library.name, IFNULL(skins_library.cloak_id, 0) AS cloak_id
+        FROM skins_library
+        WHERE skins_library.ownerid = ?
+    `, [userId]);
+    return skins;
+}
+
 async function home(req, res) {
     const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
 
@@ -22,16 +31,24 @@ async function home(req, res) {
         }
 
         const userId = status.data.sub;
+        console.log(userId);
         const [user] = await connection.query("SELECT * FROM users WHERE id = ?", [userId]);
 
-        if (!user.length || !user[0].username || !user[0].uuid || !user[0].password) {
+        if (!user.length) {
             connection.release();
+            return res.status(404).json({ error: true, msg: 'User not found', code: 404 });
+        }
+
+        if (!user[0].username || !user[0].uuid || !user[0].password) {
+            connection.release();
+            console.log(user);
             const response = {
                 username_create: !user[0].username,
                 password_create: !user[0].password
             };
             return res.status(401).json({ error: true, msg: 'Your account is not finished', code: 401, url: '/login', data: response });
         }
+
 
         const [selectedSkin] = await connection.query(`
             SELECT skin_user.skin_id, skins_library.name AS skin_name, skins_library.cloak_id
@@ -55,6 +72,9 @@ async function home(req, res) {
         })) : [];
 
         let selectedCape = null;
+        
+        const skinList = await getUserSkins(connection, status.data.sub);
+
 
         if (selectedSkin.length > 0 && selectedSkin[0].cloak_id) {
             const [cape] = await connection.query(`
@@ -73,8 +93,9 @@ async function home(req, res) {
 
         let discordIntegration = false;
         let discordData = {
-            Discord_Global_Name: "",
-            Discord_Ava: ""
+            userid: "",
+            username: "",
+            avatar: ""
         };
 
         if (discordid.length > 0) {
@@ -83,8 +104,9 @@ async function home(req, res) {
             if (discordInfo.length > 0) {
                 discordIntegration = true;
                 discordData = {
-                    Discord_Global_Name: discordInfo[0].name_gb,
-                    Discord_Ava: discordInfo[0].avatar_cache
+                    userid: discordInfo[0].userid,
+                    username: discordInfo[0].name_gb,
+                    avatar: discordInfo[0].avatar_cache
                 };
             }
         }
@@ -102,10 +124,7 @@ async function home(req, res) {
                 Selected_Skin: selectedSkin.length > 0 ? selectedSkin[0].skin_id : 0,
                 PermLvl: user[0].perms,
                 Capes: capeList,
-                Skins: selectedSkin.length > 0 ? [{
-                    Id: selectedSkin[0].skin_id,
-                    Name: selectedSkin[0].skin_name
-                }] : [],
+                Skins: skinList,
                 Discord_integration: discordIntegration,
                 Discord: discordData,
                 Mail_verification: user[0].mail_verify === 1

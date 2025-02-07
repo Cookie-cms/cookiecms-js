@@ -4,7 +4,6 @@ import home from '../modules/home/index.js';
 import multer from 'multer';
 
 const router = express.Router();
-const uploadMulter = multer({ dest: 'uploads/' }); // укажи нужную папку
 
 // Auth routes
 router.post('/auth/login', auth.login);
@@ -27,7 +26,7 @@ router.post('/home/edit/mail/request', home.requestMailCode);
 router.post('/home/edit/mail/validate', home.validateMailCode);
 router.put('/home/edit/skin', home.editSkin);
 router.delete('/home/edit/skin', home.editSkin);
-router.post('/home/upload', uploadMulter.single('file'), home.upload);
+router.post('/home/upload', home.upload);
 
 // Admin routes
 router.get('/admin/users', (req, res) => {

@@ -21,7 +21,6 @@ export async function discordcreate(req, res) {
     if (!meta.id || !meta.conn_id) {
         return res.status(400).json({ error: true, msg: "Incomplete form data provided." });
     }
-    const userID = Math.floor(Math.random() * (999999999999999999 - 1 + 1)) + 1;
 
     try {
         const connection = await pool.getConnection();        
@@ -44,9 +43,9 @@ export async function discordcreate(req, res) {
         // console.log('Discord:', discord_link[0].mail);
         if (discord_link[0].mail) {
             console.log('Discord:', discord_link[0].mail);
-            await connection.query("INSERT INTO users (id, dsid, mail, mail_verify) VALUES (?, ?, ?, 1)", [userID, meta.id, discord_link[0].mail]);            
+            await connection.query("INSERT INTO users (dsid, mail, mail_verify) VALUES (?, ?, ?, 1)", [meta.id, discord_link[0].mail]);            
         } else {
-            await connection.query("INSERT INTO users (id, dsid) VALUES (?, ?)", [userID, meta.id]);
+            await connection.query("INSERT INTO users (dsid) VALUES (?, ?)", [meta.id]);
         }
         const token = generateJwtToken(userID, JWT_SECRET_KEY);
 

@@ -54,7 +54,7 @@ DROP TABLE IF EXISTS `cloaks_users`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `cloaks_users` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `uid` bigint NOT NULL,
+  `uid` int NOT NULL,
   `cloak_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`id`),
   KEY `uid` (`uid`),
@@ -135,7 +135,7 @@ DROP TABLE IF EXISTS `skin_user`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `skin_user` (
-  `uid` bigint NOT NULL,
+  `uid` int NOT NULL,
   `skin_id` varchar(100) NOT NULL,
   UNIQUE KEY `skins_lib_unique` (`uid`),
   KEY `skin_id` (`skin_id`),
@@ -154,7 +154,7 @@ DROP TABLE IF EXISTS `skins_library`;
 CREATE TABLE `skins_library` (
   `uuid` varchar(255) NOT NULL,
   `name` varchar(255) NOT NULL,
-  `ownerid` bigint NOT NULL,
+  `ownerid` int NOT NULL,
   `slim` tinyint(1) NOT NULL DEFAULT '0',
   `hd` tinyint(1) NOT NULL DEFAULT '0',
   `disabled` tinyint(1) NOT NULL DEFAULT '0',
@@ -186,7 +186,7 @@ DROP TABLE IF EXISTS `users`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `users` (
-  `id` bigint NOT NULL,
+  `id` int NOT NULL AUTO_INCREMENT,
   `username` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `dsid` varchar(100) DEFAULT NULL,
   `mail` varchar(255) DEFAULT NULL,
@@ -212,7 +212,7 @@ DROP TABLE IF EXISTS `verify_codes`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `verify_codes` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `userid` bigint NOT NULL,
+  `userid` int NOT NULL,
   `code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `action` int NOT NULL,
   `expire` bigint DEFAULT NULL,
