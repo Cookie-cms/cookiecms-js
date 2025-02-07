@@ -1,6 +1,7 @@
 import express from 'express';
 import auth from '../modules/auth/index.js';
 import home from '../modules/home/index.js';
+import skins from '../modules/skins/index.js';
 import multer from 'multer';
 
 const router = express.Router();
@@ -27,6 +28,7 @@ router.post('/home/edit/mail/validate', home.validateMailCode);
 router.put('/home/edit/skin', home.editSkin);
 router.delete('/home/edit/skin', home.editSkin);
 router.post('/home/upload', home.upload);
+router.post('/home/edit/removediscord', home.removediscordconn);
 
 // Admin routes
 router.get('/api/admin/users', (req, res) => {
@@ -51,9 +53,8 @@ router.post('/admin/user/cape/:id', (req, res) => {
 
 
 // Skins routes
-router.get('/skin/gravitlauncher/:uuid', (req, res) => {
-    res.send('Welcome to the Express app!');
-});
+router.get('/skin/gravitlauncher/:uuid', skins.gravitLauncherResponse);
+
 
 router.get('/skin/head/:uuid', (req, res) => {
     res.send('Welcome to the Express app!');
@@ -67,13 +68,14 @@ router.get('/skin/cloack/:idcloak', (req, res) => {
     res.send('Welcome to the Express app!');
 });
 
-router.get('/skin/standart/:uuid', (req, res) => {
-    res.send('Welcome to the Express app!');
-});
+router.get('/skin/standart/:uuid', skins.getSkinFile);
 
-router.get('/skin/standart/cape/:uuid', (req, res) => {
-    res.send('Welcome to the Express app!');
-});
+router.get('/skin/standart/cape/:uuid', skins.getCloakFile);
+
+router.get('/skin/public/:uuid', skins.getFileByName);
+
+router.get('/skin/public/cape/:uuid', skins.getFileByName_capes);
+
 
 // Service routes
 router.post('/service/user', (req, res) => {

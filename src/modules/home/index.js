@@ -4,6 +4,8 @@ import username from './Username.js';
 import editPassword from './Password.js';
 import { requestMailCode, validateMailCode } from './Mail.js';
 import editSkin from './Skin.js';
+import removediscordconn from './discord.js';
+
 
 
 export default {
@@ -13,5 +15,6 @@ export default {
     editPassword,
     requestMailCode,
     validateMailCode,
-    editSkin
+    editSkin,
+    removediscordconn
 };
