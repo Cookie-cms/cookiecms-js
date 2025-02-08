@@ -43,11 +43,11 @@ export async function discordcreate(req, res) {
         // console.log('Discord:', discord_link[0].mail);
         if (discord_link[0].mail) {
             console.log('Discord:', discord_link[0].mail);
-            await connection.query("INSERT INTO users (dsid, mail, mail_verify) VALUES (?, ?, ?, 1)", [meta.id, discord_link[0].mail]);            
+            const [result] =  await connection.query("INSERT INTO users (dsid, mail, mail_verify) VALUES ( ?, ?, 1)", [meta.id, discord_link[0].mail]);            
         } else {
-            await connection.query("INSERT INTO users (dsid) VALUES (?, ?)", [meta.id]);
+            const [result] = await connection.query("INSERT INTO users (dsid) VALUES (?, ?)", [meta.id]);
         }
-        const token = generateJwtToken(userID, JWT_SECRET_KEY);
+        const token = generateJwtToken(result.insertId, JWT_SECRET_KEY);
 
         connection.release();
         return res.status(200).json({ 

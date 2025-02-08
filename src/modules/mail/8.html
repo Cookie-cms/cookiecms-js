@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webpage Editor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        #editor {
+            border: 1px solid #ccc;
+            min-height: 200px;
+            padding: 10px;
+            font-size: 16px;
+        }
+
+        #saveBtn {
+            margin-top: 10px;
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div id="editor" contenteditable="true">
+    <p>This is an editable area. Type your content here.</p>
+</div>
+
+<button id="saveBtn" onclick="saveContent()">Save</button>
+
+<script>
+    function saveContent() {
+        var editedContent = document.getElementById('editor').innerHTML;
+        // Here, you can implement logic to save the content, e.g., send it to a server.
+        console.log("Content saved:", editedContent);
+        alert("Content saved!");
+    }
+</script>
+
+</body>
+</html>
