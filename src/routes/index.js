@@ -56,17 +56,11 @@ router.post('/admin/user/cape/:id', (req, res) => {
 router.get('/skin/gravitlauncher/:uuid', skins.gravitLauncherResponse);
 
 
-router.get('/skin/head/:uuid', (req, res) => {
-    res.send('Welcome to the Express app!');
-});
+router.get('/skin/head/:uuid', skins.renderHead);
 
-router.get('/skin/body/:uuid', (req, res) => {
-    res.send('Welcome to the Express app!');
-});
+router.get('/skin/body/:uuid', skins.renderBody);
 
-router.get('/skin/cloack/:idcloak', (req, res) => {
-    res.send('Welcome to the Express app!');
-});
+router.get('/skin/cloak/:idcape', skins.renderCloak);
 
 router.get('/skin/standart/:uuid', skins.getSkinFile);
 

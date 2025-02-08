@@ -35,7 +35,7 @@ export async function getCloakFile(req, res) {
             return res.status(404).send('Cloak not found');
         }
 
-        const filePath = path.join('uploads', `${skin[0].cloak_id}.png`);
+        const filePath = path.join('uploads/capes/', `${skin[0].cloak_id}.png`);
         return sendFile(res, filePath);
 
     } catch (error) {
