@@ -9,16 +9,10 @@ import path from 'path';
 
 const config = readConfig();
 
-// Create uploads directory
-try {
-  await fs.access('uploads');
-} catch {
-  await fs.mkdir('uploads', { recursive: true });
-}
 
 const storage = multer.diskStorage({
   destination: function(req, file, cb) {
-    cb(null, 'uploads/');
+    cb(null, 'uploads/skins/');
   },
   filename: function(req, file, cb) {
     const uuid = uuidv4();
