@@ -4,6 +4,7 @@ ServiceApiToken: 2aiajDNUhW95HlSHcRDJK0psCBBGazwGWbnZi99Vcirb82SIEeNvxqKmqAJlwxu
 MaxSavedSkins: 1
 DEBUGLOG: 0 # 0 none, 1 requests, 2 full request with all
 debugToken: 64c82dcb-c29d-4ff8-b6e6-b796a2672a1
+domain: "http://localhost:3000"
 
 # Duplicating audit from site to discord 
 AuditSecret: 

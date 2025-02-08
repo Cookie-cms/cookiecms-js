@@ -63,8 +63,8 @@ async function getSkinData(userUuid) {
         if (selectedSkin[0].slim) {
             response.SKIN.metadata = { model: 'slim' };
         }
-
-        if (!selectedSkin[0].cloak_id == null) {
+        
+        if (selectedSkin[0].cloak_id) {
             const cloakPath = path.join('uploads/capes/', `${selectedSkin[0].cloak_id}.png`);
             const cloakHash = await generateFileHash(cloakPath);
             if (cloakHash) {
