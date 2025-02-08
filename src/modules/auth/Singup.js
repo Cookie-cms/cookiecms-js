@@ -3,7 +3,6 @@ import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 import readConfig from '../../inc/yamlReader.js';
-import sendHtmlEmail from '../../inc/mail.js';
 import logger from '../../logger.js';
 import sendEmbed from '../../inc/_common.js';
 
@@ -49,18 +48,7 @@ export async function signup(req, res) {
 
         const userID = result.insertId;
 
-        // await sendEmbed(mail);
-
-        await sendHtmlEmail(mail, "Verify your email", `../mails/emailVerification.html`, {
-            "LINK": `${config.domain}/verify?code=${randomCode}`,
-            "VERIFICATION_PAGE_LINK": `${config.domain}/verify`,
-            "YOUR_VERIFICATION_CODE": randomCode
-        });
-
-        await sendHtmlEmail(mail, "Welcome to our platform", `../mails/welcome.html`, {
-            "CREATED_DATE": new Date().toISOString(),
-            "ACCOUNT_ID": userID
-        });
+        await sendEmbed(mail);
 
         const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
         let randomCode = '';
