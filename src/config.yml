@@ -22,12 +22,12 @@ database:
   port: 34002
 
 smtp:
-  host: "mail.coffeedev.dev"
-  SMTPAuth: true
+  Host: "mail.coffeedev.dev"
   Username: "noreply@coffeedev.dev"
   Password: "45,chESIo,="
-  SMTPSecure: true
-  Port: 587
+  SMTPSecure: true  # SSL requires secure: true
+  Port: 465        # SSL Port
+
 
 discord:
   enabled: true

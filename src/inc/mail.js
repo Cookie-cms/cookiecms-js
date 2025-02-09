@@ -6,13 +6,14 @@ const config = readConfig();
 
 // Create reusable transporter
 const transporter = nodemailer.createTransport({
-    host: config.smtp.host || 'smtp.gmail.com',
-    port: config.smtp.Port || 587,
-    secure: config.smtp.SMTPSecure || false,
-    auth: {
-        user: config.smtp.Username,
-        pass: config.smtp.Password
-    }
+  host: config.smtp.Host,
+  port: config.smtp.Port,  // Port (465 for SSL)
+  secure: config.smtp.SMTPSecure,  // Secure should be true for SSL
+  auth: {
+    user: config.smtp.Username,
+    pass: config.smtp.Password,
+  },
+  socketTimeout: 5000,  // Optional: Increase socket timeout if needed
 });
 
 /**
@@ -36,7 +37,10 @@ export async function sendHtmlEmail({ to, subject, templatePath, variables = {} 
 
         // Send mail
         await transporter.sendMail({
-            from: process.env.SMTP_FROM,
+            from: {
+                name: 'Noreply', // Display name
+                address: config.smtp.Username
+            },            
             to,
             subject,
             html
