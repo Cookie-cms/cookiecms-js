@@ -4,7 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
-import sendEmbed from '../../inc/_common.js';
+// import sendEmbed from '../../inc/_common.js';
+import { sendVerificationEmail, sendWelcomeEmail } from '../../inc/mail_templates.js';
 
 const config = readConfig();
 
@@ -48,7 +49,6 @@ export async function signup(req, res) {
 
         const userID = result.insertId;
 
-        await sendEmbed(mail);
 
         const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
         let randomCode = '';
@@ -60,6 +60,11 @@ export async function signup(req, res) {
         const action = 1;
 
         await connection.query("INSERT INTO verify_codes (userid, code, expire, action) VALUES (?, ?, ?, ?)", [userID, randomCode, timexp, action]);
+
+        await sendVerificationEmail(validatedMail, randomCode, randomCode);
+
+        const logo = ""
+        await sendWelcomeEmail(mail, userID, logo);
 
         connection.release();
         return res.status(200).json({ error: false, msg: "Registration successful. Please check your mail to verify.", url: "/signin" });

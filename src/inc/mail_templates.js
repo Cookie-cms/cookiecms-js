@@ -1,15 +1,16 @@
-import { sendHtmlEmail } from '../modules/mail.js';
+import sendHtmlEmail from './mail.js';
 
-async function sendVerificationEmail(mail, username, verificationCode, verificationLink, logoUrl) {
+async function sendVerificationEmail(mail, verificationCode, verificationLink, logoUrl) {
+    console.log('sendVerificationEmail', mail, verificationCode, verificationLink, logoUrl);
     await sendHtmlEmail({
         to: mail,
         subject: 'Email Verification',
         templatePath: './src/modules/mail/emailVerification.html',
         variables: {
-            USER_NAME: username,
+            MAIL: mail,
             YOUR_VERIFICATION_CODE: verificationCode,
-            LINK: verificationLink,
-            VERIFICATION_PAGE_LINK: verificationLink,
+            LINK: "http://localhost:3000/confirm?code=" + verificationCode,
+            VERIFICATION_PAGE_LINK: "http://localhost:3000/confirm",
             logoimg: logoUrl
         }
     });
@@ -65,10 +66,24 @@ async function sendMailUnlinkNotification(mail, username, dateTime, logoUrl) {
     });
 }
 
+async function sendWelcomeEmail(mail, accountId, logoUrl) {
+    await sendHtmlEmail({
+        to: mail,
+        subject: 'Welcome to Our Community!',
+        templatePath: './src/modules/mail/welcome.html',
+        variables: {
+            MAIL: mail,
+            ACCOUNT_ID: accountId,
+            CREATED_DATE: new Date().toLocaleString(),
+            logoimg: logoUrl
+        }
+    });
+}
 export {
     sendVerificationEmail,
     sendDiscordUnlinkNotification,
     sendPromotion,
     sendAlert,
-    sendMailUnlinkNotification
+    sendMailUnlinkNotification,
+    sendWelcomeEmail
 };

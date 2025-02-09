@@ -46,6 +46,9 @@ async function requestVerificationCode(req, res) {
             randomCode += characters.charAt(Math.floor(Math.random() * characters.length));
         }
 
+        await sendVerificationEmail(validatedMail, userID, randomCode, randomCode);
+
+
         const timexp = Math.floor(Date.now() / 1000) + 3600; // Expires in 1 hour
         const action = 1;
 
