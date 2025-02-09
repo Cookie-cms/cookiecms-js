@@ -1,18 +1,64 @@
-const mysql = require('mysql');
+import nodemailer from 'nodemailer';
+import { readFile } from 'fs/promises';
+import readConfig from '../inc/yamlReader.js';
 
-const connection = mysql.createConnection({
-    host: 'localhost',
-    user: 'yourUsername',
-    password: 'yourPassword',
-    database: 'yourDatabase'
-});
+const config = readConfig();
 
-connection.connect((err) => {
-    if (err) {
-        console.error('Error connecting to the database:', err.stack);
-        return;
+// Create reusable transporter
+const transporter = nodemailer.createTransport({
+    host: config.smtp.host || 'smtp.gmail.com',
+    port: config.smtp.Port || 587,
+    secure: config.smtp.SMTPSecure || false,
+    auth: {
+        user: config.smtp.Username,
+        pass: config.smtp.Password
     }
-    console.log('Connected to the database as id ' + connection.threadId);
 });
 
-module.exports = connection;
+/**
+ * Send HTML email
+ * @param {Object} options Email options
+ * @param {string} options.to Recipient email
+ * @param {string} options.subject Email subject
+ * @param {string} optihiyons.templatePath Path to HTML template
+ * @param {Object} [options.variables={}] Template variables
+ * @returns {Promise<void>}
+ */
+export async function sendHtmlEmail({ to, subject, templatePath, variables = {} }) {
+    try {
+        // Read HTML template
+        let html = await readFile(templatePath, 'utf8');
+        
+        // Replace variables in template
+        Object.entries(variables).forEach(([key, value]) => {
+            html = html.replace(new RegExp(`{{${key}}}`, 'g'), value);
+        });
+
+        // Send mail
+        await transporter.sendMail({
+            from: process.env.SMTP_FROM,
+            to,
+            subject,
+            html
+        });
+    } catch (error) {
+        console.error('Mail send error:', error);
+        throw new Error('Failed to send email');
+    }
+}
+
+export default sendHtmlEmail;
+
+// Usage example:
+/*
+await sendHtmlEmail({
+    to: 'user@example.com',
+    subject: 'Welcome',
+    templatePath: './templates/welcome.html',
+    variables: {
+        username: 'John',
+        date: new Date().toLocaleDateString()
+    }
+});
+*/
+

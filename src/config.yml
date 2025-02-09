@@ -22,11 +22,11 @@ database:
   port: 34002
 
 smtp:
-  host: "smtppro.zoho.eu"
+  host: "mail.coffeedev.dev"
   SMTPAuth: true
   Username: "noreply@coffeedev.dev"
-  Password: "r%nytuD2"
-  SMTPSecure: ""
+  Password: "45,chESIo,="
+  SMTPSecure: true
   Port: 587
 
 discord:

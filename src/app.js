@@ -41,6 +41,7 @@ app.use((req, res, next) => {
 
 app.use('/api', routes);
 
+
 const PORT = process.env.PORT || 8000;
 const server = app.listen(PORT, () => {
     logger.info(`Server is running on port http://localhost:${PORT}`);
