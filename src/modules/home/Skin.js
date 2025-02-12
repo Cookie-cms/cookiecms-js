@@ -27,17 +27,17 @@ async function isJwtExpiredOrBlacklisted(token, connection, secret) {
 }
 
 async function removeSkin(connection, userId, skinId) {
-    const [skinData] = await connection.query("SELECT name FROM skin_lib WHERE uid = ? AND id = ?", [userId, skinId]);
+    const [skinData] = await connection.query("SELECT name FROM skins_library WHERE ownerid = ? AND uuid = ?", [userId, skinId]);
 
     if (!skinData.length) {
         throw new Error('Skin not found.');
     }
 
     const skinFileName = skinData[0].name;
-    const targetDir = path.join(__dirname, '../../skins/');
+    const targetDir = path.join('../../skins/');
     const skinFilePath = path.join(targetDir, skinFileName);
 
-    await connection.query("DELETE FROM skin_lib WHERE uid = ? AND id = ?", [userId, skinId]);
+    await connection.query("DELETE FROM skins_library WHERE ownerid = ? AND uuid = ?", [userId, skinId]);
 
     if (fs.existsSync(skinFilePath)) {
         fs.unlinkSync(skinFilePath);
@@ -73,7 +73,7 @@ async function editSkin(req, res) {
         const { skinid, name, slim, cloakid } = req.body;
 
         if (req.method === 'PUT') {
-            const [existingSkin] = await connection.query("SELECT id FROM skin_lib WHERE id = ? AND uid = ?", [skinid, userId]);
+            const [existingSkin] = await connection.query("SELECT id FROM skins_library WHERE uUid = ? AND ownerid = ?", [skinid, userId]);
 
             if (!existingSkin.length) {
                 res.status(404).json({ error: true, msg: 'Skin not found' });
@@ -85,7 +85,7 @@ async function editSkin(req, res) {
                 return;
             }
 
-            await connection.query("UPDATE skins_library SET name = ?, slim = ?, cloakid = ? WHERE id = ? AND uid = ?", [name, slim, cloakid, skinid, userId]);
+            await connection.query("UPDATE skins_library SET name = ?, slim = ?, cloakid = ? WHERE uuid = ? AND ownerid = ?", [name, slim, cloakid, skinid, userId]);
 
 
 
