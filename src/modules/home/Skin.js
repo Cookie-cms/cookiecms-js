@@ -52,6 +52,19 @@ async function isownercape(connection, userId, capeId) {
     return cape[0].ownerid === userId;
 }
 
+async function selectskin(connection, userId, skinId) {
+    const [existingSkin] = await connection.query("SELECT * FROM skin_user WHERE uid = ?", [userId]);
+
+    if (existingSkin.length > 0) {
+        await connection.query('UPDATE skin_user SET skin_id = ? WHERE uid = ?', [skinId, userId]);
+    } else {
+        await connection.query(
+          'INSERT INTO skin_user (uid, skin_id) VALUES (?, ?)',
+          [userId, skinId]
+        );
+    }
+}
+
 
 async function editSkin(req, res) {
     const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
@@ -97,6 +110,8 @@ async function editSkin(req, res) {
         } else if (req.method === 'DELETE') {
             await removeSkin(connection, userId, skinid);
             res.status(200).json({ error: false, msg: 'Skin deleted successfully' });
+        } else if (req.method === 'POST') {
+            await selectskin(connection, userId, skinid);
         } else {
             res.status(400).json({ error: true, msg: 'Invalid request method' });
         }

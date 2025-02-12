@@ -26,6 +26,7 @@ router.put('/home/edit/password', home.editPassword);
 // router.post('/home/edit/mail/request', home.requestMailCode);
 // router.post('/home/edit/mail/validate', home.validateMailCode);
 router.put('/home/edit/skin', home.editSkin);
+router.put('/home/edit/skin/select', home.editSkin);
 router.delete('/home/edit/skin', home.editSkin);
 router.post('/home/upload', home.upload);
 router.post('/home/edit/removediscord', home.removediscordconn);
