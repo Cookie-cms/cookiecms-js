@@ -112,6 +112,8 @@ async function editSkin(req, res) {
             res.status(200).json({ error: false, msg: 'Skin deleted successfully' });
         } else if (req.method === 'POST') {
             await selectskin(connection, userId, skinid);
+            res.status(200).json({ error: false, msg: 'Skin updated successfully' });
+
         } else {
             res.status(400).json({ error: true, msg: 'Invalid request method' });
         }
