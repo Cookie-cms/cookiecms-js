@@ -53,15 +53,15 @@ async function sendAlert(mail, reason, supportLink) {
     });
 }
 
-async function sendMailUnlinkNotification(mail, username, dateTime, logoUrl) {
+async function sendMailUnlinkNotification(mail) {
     await sendHtmlEmail({
         to: mail,
         subject: 'Mail Account Unlinking Request',
         templatePath: './src/modules/mail/unlinking.html',
         variables: {
-            USER_NAME: username,
+            USER_NAME: mail,
             DATE_TIME: new Date(dateTime).toLocaleString(),
-            logoimg: logoUrl
+            logoimg: ""
         }
     });
 }
