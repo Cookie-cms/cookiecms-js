@@ -101,3 +101,5 @@ export async function changemail(req, res) {
         connection.release();
     }
 }
+
+export default changemail;
