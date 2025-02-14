@@ -41,6 +41,8 @@ async function updateUsername(connection, userId, newUsername, currentPassword) 
     }
 
     await connection.query("UPDATE users SET username = ? WHERE id = ?", [newUsername, userId]);
+
+    return newUsername;
 }
 
 async function username(req, res) {
@@ -63,8 +65,8 @@ async function username(req, res) {
         const { username, password } = req.body;
 
         if (username && password) {
-            await updateUsername(connection, userId, username, password);
-            res.status(200).json({ error: false, msg: 'Username updated successfully' });
+            const updatedUsername = await updateUsername(connection, userId, username, password);
+            res.status(200).json({ error: false, msg: 'Username updated successfully', username: updatedUsername });
         } else {
             res.status(400).json({ error: true, msg: 'Missing required fields for updating username' });
         }
