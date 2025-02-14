@@ -25,6 +25,14 @@ async function isJwtExpiredOrBlacklisted(token, connection, secret) {
     }
 }
 
+async function validatePassword(connection, userId, password) {
+    const [user] = await connection.query('SELECT password FROM users WHERE id = ?', [userId]);
+    if (!user.length) {
+        throw new Error('User not found');
+    }
+    return bcrypt.compare(password, user[0].password);
+}
+
 async function removediscordconn(req, res) {
     const token = req.headers['authorization']?.replace('Bearer ', '');
 
@@ -66,7 +74,7 @@ async function removediscordconn(req, res) {
         }
 
         // Remove discord connection
-        await connection.query("UPDATE users SET discord_id = NULL WHERE id = ?", [userId]);
+        await connection.query("UPDATE users SET dsid = NULL WHERE id = ?", [userId]);
 
         res.status(200).json({ 
             error: false, 
