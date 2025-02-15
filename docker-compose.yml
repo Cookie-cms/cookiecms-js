@@ -33,15 +33,15 @@ services:
 #    ports:
 #      - '8080:80'
 
- #frontend:
-  #   image: 'node:latest'
-  #   container_name: frontend
-  #   working_dir: /application
-  #   volumes:
-  #     - './frontend:/application'
-  #   ports:
-  #     - '5173:5173'
-  #   command: npm run dev -- --host
+  frontend:
+    image: 'node:latest'
+    container_name: frontend
+    working_dir: /application
+    volumes:
+      - './frontend:/application'
+    ports:
+      - '8000:8000'
+    command: npm run dev
 
   
 volumes:
