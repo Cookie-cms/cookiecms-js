@@ -11,6 +11,24 @@ import jwt from 'jsonwebtoken';
 
 const config = readConfig();
 
+async function isJwtExpiredOrBlacklisted(token, connection, secret) {
+    try {
+        const decoded = jwt.verify(token, secret);
+        const [blacklistedToken] = await connection.query("SELECT * FROM blacklisted_jwts WHERE jwt = ?", [token]);
+        if (blacklistedToken.length > 0) {
+            return { valid: false, message: 'Token is blacklisted' };
+        }
+        return { valid: true, data: decoded };
+    } catch (err) {
+        if (err.name === 'TokenExpiredError') {
+            return { valid: false, message: 'Token has expired' };
+        } else if (err.name === 'JsonWebTokenError') {
+            return { valid: false, message: 'Invalid token' };
+        }
+        return { valid: false, message: 'JWT verification failed' };
+    }
+}
+
 function validate(data) {
     data = data.trim();
     data = data.replace(/<[^>]*>?/gm, '');
@@ -37,8 +55,9 @@ export async function changemail(req, res) {
         }
 
         // Verify token and get user ID
-        const status = jwt.verify(token, config.securecode);
-        const userId = status.data.sub;
+        const status = isJwtExpiredOrBlacklisted(token, connection, config.securecode);
+
+        const userId = status.data.id;
 
         const validatedMail = validate(mail);
         
