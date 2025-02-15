@@ -83,13 +83,13 @@ async function editSkin(req, res) {
         }
 
         const userId = status.data.sub;
-        const { skinid, name, slim, cloakid } = req.body;
+        const { skinid, name = null, slim = null, cloakid = null } = req.body;
 
         if (req.method === 'PUT') {
             const [existingSkin] = await connection.query("SELECT uuid FROM skins_library WHERE uuid = ? AND ownerid = ?", [skinid, userId]);
 
             if (!existingSkin.length) {
-                res.status(404).json({ error: true, msg: 'Skin not found' });
+                res.status(404).json({ error: true, msg: 'Cape not found' });
                 return;
             }
 
@@ -98,7 +98,27 @@ async function editSkin(req, res) {
                 return;
             }
 
-            await connection.query("UPDATE skins_library SET name = ?, slim = ?, cloakid = ? WHERE uuid = ? AND ownerid = ?", [name, slim, cloakid, skinid, userId]);
+            let updateFields = [];
+            let params = [];
+            if (name !== null) {
+                updateFields.push("name = ?");
+                params.push(name);
+            }
+            if (slim !== null) {
+                updateFields.push("slim = ?");
+                params.push(slim);
+            }
+            if (cloakid !== null) {
+                updateFields.push("cloakid = ?");
+                params.push(cloakid);
+            }
+            if (updateFields.length > 0) {
+                params.push(skinid, userId);
+                await connection.query(
+                    `UPDATE skins_library SET ${updateFields.join(", ")} WHERE uuid = ? AND ownerid = ?`,
+                    params
+                );
+            }
 
 
 
