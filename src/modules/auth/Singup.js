@@ -18,6 +18,10 @@ function validate(data) {
 export async function signup(req, res) {
     const { mail, password } = req.body;
 
+    if (config.production = "demo") {
+        return res.status(403).json({ error: true, msg: "Registration is disabled in demo mode." });
+    }
+
     if (!mail || !password) {
         return res.status(400).json({ error: true, msg: "Incomplete form data provided." });
     }

@@ -8,6 +8,9 @@ const config = readConfig();
 async function updatepass(req, res) {
     const { code, password } = req.body;
 
+    if (config.production = "demo") {
+        return res.status(403).json(createResponse(true, 'Password reset is disabled in demo mode.'));
+    }
     if (!code || !password) {
         return res.status(400).json(createResponse(true, 'Code and new password are required'));
     }

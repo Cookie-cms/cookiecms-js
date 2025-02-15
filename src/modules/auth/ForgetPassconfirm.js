@@ -11,6 +11,10 @@ const config = readConfig();
 export async function validate_code_fp(req, res) {
     const { code } = req.body;
 
+    if (config.production = "demo") {
+        return res.status(403).json(createResponse(true, 'Password reset is disabled in demo mode.'));
+    }
+
     if (!code) {
         return res.status(400).json(createResponse(true, 'Code not provided'));
     }

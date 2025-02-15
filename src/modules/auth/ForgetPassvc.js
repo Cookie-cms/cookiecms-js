@@ -12,6 +12,10 @@ function validate(data) {
 async function resetPassword(req, res) {
     const { mail } = req.body;
 
+    if (config.production = "demo") {
+        return res.status(403).json({ error: true, msg: "Reset password is disabled in demo mode." });
+    }
+
     if (!mail) {
         return res.status(400).json({ error: true, msg: 'Email not provided.' });
     }

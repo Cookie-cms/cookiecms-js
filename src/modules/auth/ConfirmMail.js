@@ -9,6 +9,10 @@ const JWT_SECRET_KEY = config.securecode;
 async function ConfirmMail(req, res) {
     const { code } = req.body;
 
+    if (config.production = "demo") {
+        return res.status(403).json({ error: true, msg: 'Email confirmation is disabled in demo mode.' });
+    }
+
     if (!code) {
         return res.status(400).json({ error: true, msg: 'Code not provided' });
     }
