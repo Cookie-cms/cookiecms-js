@@ -46,9 +46,7 @@ async function removeSkin(connection, userId, skinId) {
 
 async function isownercape(connection, userId, capeId) {
     const [cape] = await connection.query("SELECT uid FROM cloaks_users WHERE cloak_id = ?", [capeId]);
-    if (cape.length === 0) {
-        return false;
-    }
+
     return cape[0].ownerid === userId;
 }
 
@@ -93,7 +91,9 @@ async function editSkin(req, res) {
                 return;
             }
 
-            if (cloakid && !await isownercape(connection, userId, cloakid)) {
+            if (cloakid && await isownercape(connection, userId, cloakid)) {
+                console.log(cloakid)
+                console.log(await isownercape(connection, userId, cloakid))
                 res.status(403).json({ error: true, msg: 'You do not own this cape' });
                 return;
             }
@@ -109,7 +109,7 @@ async function editSkin(req, res) {
                 params.push(slim);
             }
             if (cloakid !== null) {
-                updateFields.push("cloakid = ?");
+                updateFields.push("cloak_id = ?");
                 params.push(cloakid);
             }
             if (updateFields.length > 0) {
