@@ -45,7 +45,7 @@ async function removeSkin(connection, userId, skinId) {
 }
 
 async function isownercape(connection, userId, capeId) {
-    const [cape] = await connection.query("SELECT uid FROM cloaks_lib WHERE cloak_id = ?", [capeId]);
+    const [cape] = await connection.query("SELECT uid FROM cloaks_users WHERE cloak_id = ?", [capeId]);
     if (cape.length === 0) {
         return false;
     }
