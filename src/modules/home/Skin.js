@@ -86,7 +86,7 @@ async function editSkin(req, res) {
         const { skinid, name, slim, cloakid } = req.body;
 
         if (req.method === 'PUT') {
-            const [existingSkin] = await connection.query("SELECT id FROM skins_library WHERE uuid = ? AND ownerid = ?", [skinid, userId]);
+            const [existingSkin] = await connection.query("SELECT uuid FROM skins_library WHERE uuid = ? AND ownerid = ?", [skinid, userId]);
 
             if (!existingSkin.length) {
                 res.status(404).json({ error: true, msg: 'Skin not found' });
