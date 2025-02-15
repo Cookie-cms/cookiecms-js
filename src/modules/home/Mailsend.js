@@ -6,6 +6,7 @@ import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 // import sendEmbed from '../../inc/_common.js';
 import { sendVerificationEmail, sendMailUnlinkNotification } from '../../inc/mail_templates.js';
+import jwt from 'jsonwebtoken';
 
 
 const config = readConfig();
