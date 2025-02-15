@@ -37,7 +37,7 @@ export async function changemail(req, res) {
         }
 
         // Verify token and get user ID
-        const status = jwt.verify(token, config.jwt.secret);
+        const status = jwt.verify(token, config.securecode);
         const userId = status.data.sub;
 
         const validatedMail = validate(mail);
