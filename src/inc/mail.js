@@ -4,29 +4,23 @@ import readConfig from '../inc/yamlReader.js';
 
 const config = readConfig();
 
-// Create reusable transporter
 const transporter = nodemailer.createTransport({
-  host: config.smtp.Host,
-  port: config.smtp.Port,  // Port (465 for SSL)
-  secure: config.smtp.SMTPSecure,  // Secure should be true for SSL
-  auth: {
-    user: config.smtp.Username,
-    pass: config.smtp.Password,
-  },
-  socketTimeout: 5000,  // Optional: Increase socket timeout if needed
+    host: config.smtp.Host,
+    port: config.smtp.Port,
+    secure: config.smtp.Secure, // true for 465, false for other ports
+    auth: {
+        user: config.smtp.Username,
+        pass: config.smtp.Password
+    }
 });
 
-/**
- * Send HTML email
- * @param {Object} options Email options
- * @param {string} options.to Recipient email
- * @param {string} options.subject Email subject
- * @param {string} optihiyons.templatePath Path to HTML template
- * @param {Object} [options.variables={}] Template variables
- * @returns {Promise<void>}
- */
-export async function sendHtmlEmail({ to, subject, templatePath, variables = {} }) {
+async function sendHtmlEmail({ to, subject, templatePath, variables }) {
     try {
+        console.log('Sending email to:', to);
+        console.log('Email subject:', subject);
+        console.log('Template path:', templatePath);
+        console.log('Variables:', variables);
+
         // Read HTML template
         let html = await readFile(templatePath, 'utf8');
         
@@ -52,17 +46,3 @@ export async function sendHtmlEmail({ to, subject, templatePath, variables = {} 
 }
 
 export default sendHtmlEmail;
-
-// Usage example:
-/*
-await sendHtmlEmail({
-    to: 'user@example.com',
-    subject: 'Welcome',
-    templatePath: './templates/welcome.html',
-    variables: {
-        username: 'John',
-        date: new Date().toLocaleDateString()
-    }
-});
-*/
-

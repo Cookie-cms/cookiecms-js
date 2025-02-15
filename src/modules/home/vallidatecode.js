@@ -17,6 +17,8 @@ async function validate_password(connection, userId, password) {
 async function validatecode(req, res) {
     const { code, password } = req.body;
 
+    console.log(code)
+
     if (!code) {
         return res.status(400).json({ error: true, msg: 'Code not provided' });
     }

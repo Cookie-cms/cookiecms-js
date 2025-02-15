@@ -53,19 +53,24 @@ async function sendAlert(mail, reason, supportLink) {
     });
 }
 
-async function sendMailUnlinkNotification(mail) {
+async function sendMailUnlinkNotification(old_mail) {
+    const mail = old_mail;
+    console.log('Old mail:', mail);
+
+    // Ensure mail is a string
+    const emailAddress = typeof mail === 'string' ? mail : mail[0].mail;
+
+    console.log('Sending mail unlink notification to:', emailAddress);
+
     await sendHtmlEmail({
-        to: mail,
+        to: emailAddress,
         subject: 'Mail Account Unlinking Request',
         templatePath: './src/modules/mail/unlinking.html',
         variables: {
-            USER_NAME: mail,
-            DATE_TIME: new Date(dateTime).toLocaleString(),
-            logoimg: ""
+            USER_NAME: emailAddress,
         }
     });
 }
-
 async function sendWelcomeEmail(mail, accountId, logoUrl) {
     await sendHtmlEmail({
         to: mail,

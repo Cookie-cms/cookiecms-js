@@ -5,7 +5,7 @@ import editPassword from './Password.js';
 import editSkin from './Skin.js';
 import removediscordconn from './discord.js';
 import changemail from './Mailsend.js';
-import validatecode from './Mailsend.js';
+import validatecode from './vallidatecode.js';
 
 
 export default {

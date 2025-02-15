@@ -4,30 +4,15 @@ import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
-// import sendEmbed from '../../inc/_common.js';
+import {isJwtExpiredOrBlacklisted} from '../../inc/jwtHelper.js';
 import { sendVerificationEmail, sendMailUnlinkNotification } from '../../inc/mail_templates.js';
 import jwt from 'jsonwebtoken';
 
 
 const config = readConfig();
 
-async function isJwtExpiredOrBlacklisted(token, connection, secret) {
-    try {
-        const decoded = jwt.verify(token, secret);
-        const [blacklistedToken] = await connection.query("SELECT * FROM blacklisted_jwts WHERE jwt = ?", [token]);
-        if (blacklistedToken.length > 0) {
-            return { valid: false, message: 'Token is blacklisted' };
-        }
-        return { valid: true, data: decoded };
-    } catch (err) {
-        if (err.name === 'TokenExpiredError') {
-            return { valid: false, message: 'Token has expired' };
-        } else if (err.name === 'JsonWebTokenError') {
-            return { valid: false, message: 'Invalid token' };
-        }
-        return { valid: false, message: 'JWT verification failed' };
-    }
-}
+
+const JWT_SECRET_KEY = config.securecode;
 
 function validate(data) {
     data = data.trim();
@@ -35,11 +20,8 @@ function validate(data) {
     return data;
 }
 
-export async function validatePassword(connection, userId, password) {
-    const [user] = await connection.query('SELECT password FROM users WHERE id = ?', [userId]);
-    if (!user.length) {
-        throw new Error('User not found');
-    }
+async function validatePassword(connection, userId, password) {
+    const [user] = await connection.query("SELECT password FROM users WHERE id = ?", [userId]);
     return bcrypt.compare(password, user[0].password);
 }
 
@@ -48,6 +30,8 @@ export async function changemail(req, res) {
     
     try {
         const { mail, password } = req.body;
+        console.log(mail);
+        console.log(password);
         const token = req.headers.authorization?.split(' ')[1];
 
         if (!mail || !password || !token) {
@@ -55,9 +39,10 @@ export async function changemail(req, res) {
         }
 
         // Verify token and get user ID
-        const status = isJwtExpiredOrBlacklisted(token, connection, config.securecode);
+        const status = await isJwtExpiredOrBlacklisted(token, connection, JWT_SECRET_KEY);
 
         const userId = status.data.sub;
+        // console.log(password);  
 
         const validatedMail = validate(mail);
         
@@ -93,19 +78,30 @@ export async function changemail(req, res) {
         const timexp = Math.floor(Date.now() / 1000) + 3600;
         const action = 2; // Action type for email change
 
-        const old_mail = await connection.query(
+        const [old_mail_result] = await connection.query(
             "SELECT mail FROM users WHERE id = ?",
             [userId]
         );
 
         await connection.query(
-            "INSERT INTO verify_codes (userid, code, expire, action, newmail) VALUES (?, ?, ?, ?, ?)",
-            [userId, randomCode, timexp, action, validatedMail]
+            "INSERT INTO verify_codes (userid, code, expire, action) VALUES (?, ?, ?, ?)",
+            [userId, randomCode, timexp, action]
+        );
+
+        await connection.query(
+            "UPDATE users SET mail = ? WHERE id = ?",
+            [validatedMail, userId]
         );
 
         // Send verification email
         await sendVerificationEmail(validatedMail, randomCode, randomCode);
-        await sendMailUnlinkNotification(old_mail);
+        try {
+            console.log(old_mail_result[0].mail)
+            await sendMailUnlinkNotification(old_mail_result[0].mail);
+        } catch (error) {
+            console.error("[ERROR] Failed to send unlink notification:", error);
+        }
+
         return res.status(200).json({ 
             error: false, 
             msg: "Verification email sent to new address" 
