@@ -54,6 +54,7 @@ permissions:
     - profile.changeskinHD
   3:
     - admin.userslist
+    - admin.userskins
     - admin.useredit
     - admin.mailsend
     - admin.capes

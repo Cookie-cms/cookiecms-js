@@ -3,8 +3,28 @@ import multer from 'multer';
 import fs from 'fs/promises';
 import path from 'path';
 
-// ...existing storage and upload code...
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/capes/');
+    },
+    filename: (req, file, cb) => {
+        const uuid = uuidv4();
+        req.capeUuid = uuid;
+        cb(null, `${uuid}.png`);
+    }
+});
 
+const upload = multer({
+    storage,
+    limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype !== 'image/png') {
+            cb(new Error('Only PNG files allowed'));
+            return;
+        }
+        cb(null, true);
+    }
+}).single('cape');
 async function uploadCape(req, res) {
     const connection = await mysql.getConnection();
     try {
