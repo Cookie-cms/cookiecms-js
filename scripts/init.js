@@ -10,6 +10,39 @@ function generateSecureCode(length = 64) {
     return crypto.randomBytes(length).toString('hex').slice(0, length);
 }
 
+async function createDirectories() {
+    const directories = [
+        'uploads/skins/',
+        'uploads/capes/'
+    ];
+
+    for (const dir of directories) {
+        try {
+            await fs.mkdir(dir, { recursive: true });
+            console.log(`Directory ${dir} created.`);
+        } catch (err) {
+            console.error(`Error creating directory ${dir}:`, err);
+        }
+    }
+}
+
+async function runDbInit() {
+    return new Promise((resolve, reject) => {
+        exec('npm run db:init', (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Error running db:init: ${error.message}`);
+                return reject(error);
+            }
+            if (stderr) {
+                console.error(`db:init stderr: ${stderr}`);
+                return reject(new Error(stderr));
+            }
+            console.log(`db:init stdout: ${stdout}`);
+            resolve(stdout);
+        });
+    });
+}
+
 async function initConfig() {
     const questions = [
         {
@@ -106,13 +139,11 @@ async function initConfig() {
             type: 'input',
             name: 'discord.client_id',
             message: 'Enter the Discord client ID:',
-            default: '1181148727826722816'
         },
         {
             type: 'input',
             name: 'discord.secret_id',
             message: 'Enter the Discord client secret:',
-            default: 'kl-yQ-6Sa1LE23-o-QhLB_Ny9aSttURp'
         },
         {
             type: 'input',
@@ -194,6 +225,9 @@ async function initConfig() {
     const yamlStr = yaml.dump(config);
     await fs.writeFile(configPath, yamlStr, 'utf8');
     console.log('Configuration saved to', configPath);
+
+    await createDirectories();
+    await runDbInit();
 }
 
 initConfig().catch(err => {

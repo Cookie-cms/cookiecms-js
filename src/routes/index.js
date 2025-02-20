@@ -2,6 +2,7 @@ import express from 'express';
 import auth from '../modules/auth/index.js';
 import home from '../modules/home/index.js';
 import skins from '../modules/skins/index.js';
+import admin from '../modules/admin/index.js';
 import multer from 'multer';
 
 const router = express.Router();
@@ -32,6 +33,11 @@ router.post('/home/upload', home.upload);
 router.post('/home/edit/removediscord', home.removediscordconn);
 
 // Admin routes
+router.post('/admin/cape', admin.uploadCape);
+router.delete('/admin/cape', admin.deleteCape);
+router.put('/admin/cape', admin.updateCape);
+
+
 router.get('/api/admin/users', (req, res) => {
     res.send('Welcome to the Express app!');
 });
