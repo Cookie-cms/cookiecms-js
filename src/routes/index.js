@@ -37,6 +37,7 @@ router.post('/admin/cape', admin.uploadCape);
 router.delete('/admin/cape', admin.deleteCape);
 router.put('/admin/cape', admin.updateCape);
 
+// router.get('/admin/:ownerid/skins', getUserSkins);
 
 router.get('/api/admin/users', (req, res) => {
     res.send('Welcome to the Express app!');
