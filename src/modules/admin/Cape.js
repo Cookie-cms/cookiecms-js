@@ -14,6 +14,20 @@ const storage = multer.diskStorage({
     }
 });
 
+async function checkPermission(connection, userId) {
+    const [userPerms] = await connection.query(
+        "SELECT permlvl FROM users WHERE id = ?", 
+        [userId]
+    );
+    
+    if (!userPerms.length) return false;
+    
+    const permLevel = userPerms[0].permlvl;
+    const permissions = config.permissions[permLevel] || [];
+    
+    return permissions.includes('admin.capes');
+}
+
 const upload = multer({
     storage,
     limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
