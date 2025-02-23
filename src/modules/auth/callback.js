@@ -2,7 +2,7 @@ import oauth from '@cookie-cms/oauth2-discord';
 import jwt from 'jsonwebtoken';
 import mysql from '../../inc/mysql.js';
 import logger from '../../logger.js';
-import createResponse from '../../inc/_common.js';
+import { createResponse } from '../../inc/_common.js';
 import readConfig from '../../inc/yamlReader.js';
 
 const config = readConfig();

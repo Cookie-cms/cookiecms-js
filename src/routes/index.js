@@ -3,6 +3,7 @@ import auth from '../modules/auth/index.js';
 import home from '../modules/home/index.js';
 import skins from '../modules/skins/index.js';
 import admin from '../modules/admin/index.js';
+import UsersList from '../modules/public/users.js';
 import multer from 'multer';
 
 const router = express.Router();
@@ -36,6 +37,8 @@ router.post('/home/edit/removediscord', home.removediscordconn);
 router.post('/admin/cape', admin.uploadCape);
 router.delete('/admin/cape', admin.deleteCape);
 router.put('/admin/cape', admin.updateCape);
+
+router.get('/pub/list', UsersList);
 
 // router.get('/admin/:ownerid/skins', getUserSkins);
 

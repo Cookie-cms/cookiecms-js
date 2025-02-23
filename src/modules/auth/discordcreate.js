@@ -6,6 +6,7 @@ import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 import sendEmbed from '../../inc/_common.js';
 import { generateJwtToken } from '../../inc/jwtHelper.js';
+import { addaudit } from '../../inc/_common.js';
 
 const config = readConfig();
 
@@ -42,12 +43,18 @@ export async function discordcreate(req, res) {
         }
         // console.log('Discord:', discord_link[0].mail);
         if (discord_link[0].mail) {
-            console.log('Discord:', discord_link[0].mail);
-            await connection.query("INSERT INTO users (dsid, mail, mail_verify) VALUES (?, ?, 1)", [meta.id, discord_link[0].mail]);            
+            const result = await connection.query("INSERT INTO users (dsid, mail, mail_verify) VALUES (?, ?, 1)", [meta.id, discord_link[0].mail]);   
+            userId = result.insertId;
+ 
         } else {
-            await connection.query("INSERT INTO users (dsid) VALUES (?, ?)", [meta.id]);
+            const result = await connection.query("INSERT INTO users (dsid) VALUES (?, ?)", [meta.id]);
+            userId = result.insertId;
+
         }
-        const token = generateJwtToken(userID, JWT_SECRET_KEY);
+        logger.info('User ID:', userId);
+        const token = generateJwtToken(userId, JWT_SECRET_KEY);
+        await addaudit(connection, userId, 'registered', userId, null, null, null);        
+        
 
         connection.release();
         return res.status(200).json({ 

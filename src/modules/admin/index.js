@@ -1,4 +1,4 @@
-import { uploadCape, updateCape, deleteCape } from './Cape';
+import { uploadCape, updateCape, deleteCape } from './Cape.js';
 
 export default {
     uploadCape,

@@ -3,27 +3,11 @@ import mysql from '../../inc/mysql.js';
 import jwt from 'jsonwebtoken';
 import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
+import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 
 const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
 
-async function isJwtExpiredOrBlacklisted(token, connection, secret) {
-    try {
-        const decoded = jwt.verify(token, secret);
-        const [blacklistedToken] = await connection.query("SELECT * FROM blacklisted_jwts WHERE jwt = ?", [token]);
-        if (blacklistedToken.length > 0) {
-            return { valid: false, message: 'Token is blacklisted' };
-        }
-        return { valid: true, data: decoded };
-    } catch (err) {
-        if (err.name === 'TokenExpiredError') {
-            return { valid: false, message: 'Token has expired' };
-        } else if (err.name === 'JsonWebTokenError') {
-            return { valid: false, message: 'Invalid token' };
-        }
-        return { valid: false, message: 'JWT verification failed' };
-    }
-}
 
 async function validatePassword(connection, userId, password) {
     const [user] = await connection.query('SELECT password FROM users WHERE id = ?', [userId]);

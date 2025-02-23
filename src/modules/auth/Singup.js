@@ -6,6 +6,7 @@ import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 // import sendEmbed from '../../inc/_common.js';
 import { sendVerificationEmail, sendWelcomeEmail } from '../../inc/mail_templates.js';
+import addaudit from '../../inc/_common.js';
 
 const config = readConfig();
 
@@ -52,6 +53,8 @@ export async function signup(req, res) {
         const [result] = await connection.query("INSERT INTO users (mail, password) VALUES (?, ?)", [validatedMail, hashedPassword]);
 
         const userID = result.insertId;
+
+        await addaudit(connection, userID, 'registered', userID, null, null, null);
 
 
         const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
