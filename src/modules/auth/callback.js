@@ -4,6 +4,7 @@ import mysql from '../../inc/mysql.js';
 import logger from '../../logger.js';
 import { createResponse } from '../../inc/_common.js';
 import readConfig from '../../inc/yamlReader.js';
+import { addaudit } from '../../inc/_common.js';
 
 const config = readConfig();
 

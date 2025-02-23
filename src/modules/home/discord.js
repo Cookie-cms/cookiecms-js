@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
+import { addaudit } from '../../inc/_common.js';
 
 const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
@@ -57,6 +58,8 @@ async function removediscordconn(req, res) {
             });
         }
 
+        const oldDiscordId = (await connection.query('SELECT dsid FROM users WHERE id = ?', [userId]))[0][0].dsid;
+        addaudit(connection, userId, 'Discord connection removed', userId, oldDiscordId, null, 'dsid');
         // Remove discord connection
         await connection.query("UPDATE users SET dsid = NULL WHERE id = ?", [userId]);
 

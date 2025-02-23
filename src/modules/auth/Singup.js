@@ -54,7 +54,7 @@ export async function signup(req, res) {
 
         const userID = result.insertId;
 
-        await addaudit(connection, userID, 'registered', userID, null, null, null);
+        addaudit(connection, userID, 'registered', userID, null, null, null);
 
 
         const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';

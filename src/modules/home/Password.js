@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
+import { addaudit } from '../../inc/_common.js';
 
 const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
@@ -44,6 +45,7 @@ async function editPassword(req, res) {
 
         if (password && new_password) {
             await changePassword(connection, userId, password, new_password);
+            addaudit(connection, userId, 'Password changed', userId, null, null, 'password');
             res.status(200).json({ error: false, msg: 'Password updated successfully' });
         } else {
             res.status(400).json({ error: true, msg: 'Missing required fields for changing password' });

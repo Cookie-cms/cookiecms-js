@@ -3,6 +3,8 @@ import bcrypt from 'bcrypt';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import readConfig from '../../inc/yamlReader.js';
 import pool from '../../inc/mysql.js';
+import { addaudit } from '../../inc/_common.js';
+
 
 const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
@@ -60,6 +62,15 @@ async function finishRegister(req, res) {
         const newUuid = uuidv4();
         await connection.query("UPDATE users SET uuid = ?, username = ? WHERE id = ?", [newUuid, data.username, userId]);
 
+        await addaudit(
+            connection,
+            userId,
+            'username',
+            userId,
+            null,  // oldValue
+            data.username,  // newValue
+            'users-update'  // fieldChanged
+        );
         if (data.password) {
             const hashedPassword = await bcrypt.hash(data.password, 10);
             await connection.query("UPDATE users SET password = ? WHERE id = ?", [hashedPassword, userId]);

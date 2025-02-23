@@ -55,6 +55,8 @@ permissions:
     - admin.useredit
     - admin.mailsend
     - admin.capes
+    - admin.audit
+    - admin.settings
 
 
 servers:

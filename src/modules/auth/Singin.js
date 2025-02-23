@@ -4,6 +4,7 @@ import mysql from '../../inc/mysql.js';
 import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 import { generateJwtToken } from '../../inc/jwtHelper.js';
+import { addaudit } from '../../inc/_common.js';
 
 
 const config = readConfig();
@@ -86,6 +87,8 @@ async function login(req, res) {
                     return res.status(404).json({ error: true, msg: 'Account cannot be connected' });
                 }
 
+                addaudit(connection, user[0].id, 'Discord linked', user[0].id, null, meta.id, 'dsid');
+                
                 // Step 3: Update the MySQL database
                 await connection.query("UPDATE users SET dsid = ? WHERE id = ?", [meta.id, user[0].id]);
 

@@ -27,42 +27,38 @@ export async function discordcreate(req, res) {
         const connection = await pool.getConnection();        
         const JWT_SECRET_KEY = config.securecode;
 
-        // const [existingUser] = await connection.query("SELECT * FROM users WHERE BINARY mail = ?", [validatedMail]);
-
-        // if (existingUser.length > 0) {
-        //     connection.release();
-        //     return res.status(409).json({ error: true, msg: "Email is already registered." });
-        // }
-
         const [discord_link] = await connection.query("SELECT * FROM discord WHERE userid = ?", [meta.id]);
-        // console.log('Discord:', discord_link[0].conn_id, 'Meta:', meta.conn_id, 'Discord:', discord_link);
+
         if (discord_link.length === 0 || discord_link[0].conn_id !== meta.conn_id) {
             console.log('Discord:', discord_link[0].conn_id, 'Meta:', conn_id, 'Discord:', discord_link);
             connection.release();
             return res.status(404).json({ error: true, msg: 'Account cannot be connected' });
         }
-        // console.log('Discord:', discord_link[0].mail);
+
+        let result; // Declare result here
+
         if (discord_link[0].mail) {
-            const result = await connection.query("INSERT INTO users (dsid, mail, mail_verify) VALUES (?, ?, 1)", [meta.id, discord_link[0].mail]);   
-            userId = result.insertId;
- 
+            [result] = await connection.query("INSERT INTO users (dsid, mail, mail_verify) VALUES (?, ?, 1)", [meta.id, discord_link[0].mail]);   
         } else {
-            const result = await connection.query("INSERT INTO users (dsid) VALUES (?, ?)", [meta.id]);
-            userId = result.insertId;
-
+            [result] = await connection.query("INSERT INTO users (dsid) VALUES (?)", [meta.id]);
         }
-        logger.info('User ID:', userId);
-        const token = generateJwtToken(userId, JWT_SECRET_KEY);
-        await addaudit(connection, userId, 'registered', userId, null, null, null);        
-        
 
-        connection.release();
+        
+        addaudit(connection, result.insertId, 'registered', result.insertId, null, null, null);
+        
+        const userId = result.insertId;
+        logger.info('User ID:', userId);
+
+        const token = generateJwtToken(userId, JWT_SECRET_KEY);
+
+        connection.release(); // Ensure the connection is released
+
         return res.status(200).json({ 
             error: false, 
             msg: "Registration successful", 
             url: "/home",  // Optional redirect URL
             data: {
-            jwt: token  // The JWT token for authenticated requests
+                jwt: token  // The JWT token for authenticated requests
             }
         });
     } catch (err) {

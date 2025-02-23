@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
+import { addaudit } from '../../inc/_common.js';
 
 const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
@@ -49,6 +50,8 @@ async function username(req, res) {
         const { username, password } = req.body;
 
         if (username && password) {
+            const oldUsername = (await connection.query("SELECT username FROM users WHERE id = ?", [userId]))[0][0].username;
+            addaudit(connection, userId, 'Username updated', userId, oldUsername, username, 'username');
             const updatedUsername = await updateUsername(connection, userId, username, password);
             res.status(200).json({ error: false, msg: 'Username updated successfully', username: updatedUsername });
         } else {

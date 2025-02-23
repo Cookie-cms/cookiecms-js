@@ -42,6 +42,9 @@ router.get('/pub/list', UsersList);
 
 // router.get('/admin/:ownerid/skins', getUserSkins);
 
+
+router.get('/admin/audit', admin.audit);
+
 router.get('/api/admin/users', (req, res) => {
     res.send('Welcome to the Express app!');
 });

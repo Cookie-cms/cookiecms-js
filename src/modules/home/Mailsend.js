@@ -7,6 +7,7 @@ import logger from '../../logger.js';
 import {isJwtExpiredOrBlacklisted} from '../../inc/jwtHelper.js';
 import { sendVerificationEmail, sendMailUnlinkNotification } from '../../inc/mail_templates.js';
 import jwt from 'jsonwebtoken';
+import { addaudit } from '../../inc/_common.js';
 
 
 const config = readConfig();
@@ -82,6 +83,8 @@ export async function changemail(req, res) {
             "SELECT mail FROM users WHERE id = ?",
             [userId]
         );
+
+        addaudit(connection, userId, 'mail', userId, old_mail_result[0].mail, validatedMail, 'mail');
 
         await connection.query(
             "INSERT INTO verify_codes (userid, code, expire, action) VALUES (?, ?, ?, ?)",

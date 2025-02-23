@@ -48,7 +48,7 @@ async function updatepass(req, res) {
         // Hash the new password
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(password, saltRounds);
-        await addaudit(connection, codeData.userid, 'password reset', codeData.userid, null, null, null);
+        addaudit(connection, codeData.userid, 'password reset', codeData.userid, null, null, null);
         // Update the user's password in the database
         await connection.query(`
             UPDATE users SET password = ? WHERE id = ?

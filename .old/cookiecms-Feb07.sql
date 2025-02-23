@@ -2,7 +2,7 @@
 --
 -- Host: localhost    Database: cookiecms
 -- ------------------------------------------------------
--- Server version	8.0.41
+-- Server version       8.0.41
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -14,29 +14,6 @@
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
-
---
--- Table structure for table `audit_log`
---
-
-DROP TABLE IF EXISTS `audit_log`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `audit_log` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `iss` int NOT NULL,
-  `action` varchar(255) NOT NULL,
-  `target_id` int NOT NULL,
-  `old_value` text,
-  `new_value` text,
-  `field_changed` varchar(255) DEFAULT NULL,
-  `time` bigint NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `iss` (`iss`),
-  KEY `target_id` (`target_id`),
-  KEY `time` (`time`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
 -- Table structure for table `blacklisted_jwts`
@@ -51,7 +28,7 @@ CREATE TABLE `blacklisted_jwts` (
   `expiration` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `expiration` (`expiration`)
-) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -84,7 +61,7 @@ CREATE TABLE `cloaks_users` (
   KEY `cloak_id` (`cloak_id`),
   CONSTRAINT `cloaks_users_ibfk_1` FOREIGN KEY (`uid`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `cloaks_users_ibfk_2` FOREIGN KEY (`cloak_id`) REFERENCES `cloaks_lib` (`uuid`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -223,7 +200,7 @@ CREATE TABLE `users` (
   PRIMARY KEY (`id`),
   KEY `hwidId` (`hwidId`),
   CONSTRAINT `users_ibfk_1` FOREIGN KEY (`hwidId`) REFERENCES `hwids` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=35 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -242,7 +219,7 @@ CREATE TABLE `verify_codes` (
   PRIMARY KEY (`id`),
   KEY `userid` (`userid`),
   CONSTRAINT `verify_codes_ibfk_1` FOREIGN KEY (`userid`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=53 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -254,4 +231,4 @@ CREATE TABLE `verify_codes` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-02-23 17:03:02
+-- Dump completed on 2025-02-06 16:31:44
