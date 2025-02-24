@@ -86,7 +86,26 @@ async function initDB() {
 
     console.log('User created with ID:', userID);
 
-    // Optionally, you can import data from a SQL file (like `cookiecms-seed.sql`)
+    // Audit log
+
+    const query = `
+            INSERT INTO audit_log (iss, action, target_id, old_value, new_value, field_changed, time)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        `;
+
+    
+    const time = Math.floor(Date.now() / 1000);
+
+    const values = [userID, 'Created', userID, null, null, 'users', time];
+
+    const [results] = await connection.query(query, values);
+
+    logger.info('Audit entry added successfully:', results);
+
+
+
+
+
 
     process.exit(0);
     // Close the connection pool
