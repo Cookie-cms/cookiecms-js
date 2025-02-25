@@ -4,6 +4,7 @@ ServiceApiToken: 2aiajDNUhW95HlSHcRDJK0psCBBGazwGWbnZi99Vcirb82SIEeNvxqKmqAJlwxu
 MaxSavedSkins: 1
 domain: "http://localhost:3000"
 production: demo
+debug: false
 
 # Duplicating audit from site to discord 
 AuditSecret: 

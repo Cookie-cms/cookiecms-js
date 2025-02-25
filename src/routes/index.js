@@ -8,6 +8,10 @@ import multer from 'multer';
 
 const router = express.Router();
 
+// Public routes
+router.get('/pub/list', UsersList);
+
+
 // Auth routes
 router.post('/auth/login', auth.login);
 router.post('/auth/confirm', auth.confirmMail);
@@ -34,20 +38,19 @@ router.post('/home/upload', home.upload);
 router.post('/home/edit/removediscord', home.removediscordconn);
 
 // Admin routes
+router.get('/admin/users', admin.users);
+router.get('/admin/user/:id', admin.user);
+
 router.post('/admin/cape', admin.uploadCape);
 router.delete('/admin/cape', admin.deleteCape);
 router.put('/admin/cape', admin.updateCape);
 
-router.get('/pub/list', UsersList);
-
-// router.get('/admin/:ownerid/skins', getUserSkins);
-
-
 router.get('/admin/audit', admin.audit);
 
-router.get('/admin/users', admin.users);
 
-router.get('/admin/user/:id', admin.user);
+
+
+
 router.get('/admin/allcapes', admin.allcapes);
 router.get('/admin/skins', admin.getSkins);
 
