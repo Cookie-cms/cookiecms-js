@@ -1,28 +1,12 @@
 import mysql from '../../inc/mysql.js';
 import readConfig from '../../inc/yamlReader.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
+import {checkPermission} from '../../inc/_common.js';
 
 
 const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
 
-async function checkPermission(connection, userId) {
-    // console.log(userId);
-    if (!userId) return false;
-    
-    const [userPerms] = await connection.query(
-        "SELECT perms FROM users WHERE id = ?", 
-        [userId]
-    );
-
-    if (!userPerms.length) return false;
-
-    const permLevel = userPerms[0].perms;
-    // console.log(permLevel);
-    const permissions = config.permissions[permLevel] || [];
-
-    return permissions.includes('admin.audit');
-}
 
 async function audit(req, res) {
     const connection = await mysql.getConnection();
@@ -38,7 +22,7 @@ async function audit(req, res) {
             return res.status(401).json({ error: true, msg: status.message, code: 401 });
         }
 
-        const hasPermission = await checkPermission(connection, status.data.sub);
+        const hasPermission = await checkPermission(connection, status.data.sub, 'admin.audit');
         if (!hasPermission) {
             return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
         }

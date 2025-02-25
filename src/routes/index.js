@@ -45,12 +45,12 @@ router.get('/pub/list', UsersList);
 
 router.get('/admin/audit', admin.audit);
 
-router.get('/api/admin/users', (req, res) => {
-    res.send('Welcome to the Express app!');
-});
-router.get('/admin/user', (req, res) => {
-    res.send('Welcome to the Express app!');
-});
+router.get('/admin/users', admin.users);
+
+router.get('/admin/user/:id', admin.user);
+router.get('/admin/allcapes', admin.allcapes);
+router.get('/admin/skins', admin.getSkins);
+
 router.post('/admin/user', (req, res) => {
     res.send('Welcome to the Express app!');
 });

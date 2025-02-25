@@ -1,13 +1,12 @@
+import {checkPermission} from '../../inc/_common.js';
 import mysql from '../../inc/mysql.js';
 import readConfig from '../../inc/yamlReader.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
-import {checkPermission} from '../../inc/_common.js';
 
 const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
 
-
-async function users(req, res) {
+async function getSkins(req, res) {
     const connection = await mysql.getConnection();
     try {
         const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
@@ -21,21 +20,29 @@ async function users(req, res) {
             return res.status(401).json({ error: true, msg: status.message, code: 401 });
         }
 
-        const hasPermission = await checkPermission(connection, status.data.sub, 'admin.users');
-        if (!hasPermission) {
-            return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
-        }
 
-        const [audit] = await connection.query("SELECT * FROM users");
+        // Delete owners first (foreign key constraint)
+        const [skins] = await connection.query(
+            "SELECT * FROM skins_library"
+        );
 
-        res.json({ error: false, data: audit });
+        const skins_data = skins.map(skin => ({
+            uuid: skin.uuid,
+            name: skin.name,
+            ownerid: skin.ownerid,
+            slim: skin.slim,
+            hd: skin.hd,
+            cloak_id: skin.cloak_id
+        }));
+
+        res.json({ error: false, data: skins_data });
 
     } catch (err) {
-        console.error("[ERROR] Failed to get audit logs:", err);
-        res.status(500).json({ error: true, msg: 'Failed to get audit logs' });
+        console.error("[ERROR] Cape deletion failed:", err);
+        res.status(500).json({ error: true, msg: 'Deletion failed' });
     } finally {
         connection.release();
     }
 }
 
-export default users;
+export default getSkins;

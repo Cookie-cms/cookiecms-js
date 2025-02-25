@@ -40,9 +40,9 @@ async function askQuestions() {
     const answers = await inquirer.prompt([
         { type: 'input', name: 'username', message: 'Please write your username: ' },
         { type: 'password', name: 'password', message: 'Please write your password: ', mask: '*' },
-        { type: 'input', name: 'email', message: 'Please write your email: ' },
+        { type: 'input', name: 'email', message: 'Please write your email: ', default: "example@example.com"},
         { type: 'input', name: 'discord_id', message: 'Please write your discord ID (can be null): ', default: null },
-        { type: 'confirm', name: 'isAdmin', message: 'Do you want to grant admin privileges to this user?(example@example.com)', default: "example@example.com" },
+        { type: 'confirm', name: 'isAdmin', message: 'Do you want to grant admin privileges to this user?(example@example.com)', },
     ]);
 
     return answers;

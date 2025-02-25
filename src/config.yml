@@ -50,12 +50,14 @@ permissions:
   2:
     - profile.changeskinHD
   3:
-    - admin.userslist
+    - admin.users
     - admin.userskins
     - admin.useredit
+    - admin.user
     - admin.mailsend
     - admin.capes
     - admin.audit
+  4:
     - admin.settings
 
 

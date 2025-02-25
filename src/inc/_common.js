@@ -57,6 +57,29 @@ export async function addaudit(connection, iss, action, forId, oldValue = null, 
 }
 
 
+export async function checkPermission(connection, userId, permission) {
+    if (!userId || !permission) return false;
+    
+    const [userPerms] = await connection.query(
+        "SELECT perms FROM users WHERE id = ?", 
+        [userId]
+    );
+
+    if (!userPerms.length) return false;
+
+    const permLevel = userPerms[0].perms;
+    let allPermissions = [];
+
+    // Combine all permissions from lower levels up to user's level
+    for (let level = 0; level <= permLevel; level++) {
+        const levelPermissions = config.permissions[level] || [];
+        allPermissions = [...allPermissions, ...levelPermissions];
+    }
+
+
+    return allPermissions.includes(permission);
+}
+
 // function sendEmbed(mail) {
 //     const time = new Date().toLocaleString();
 //     if (config.AuditSecret.enabled) {
@@ -88,5 +111,6 @@ export async function addaudit(connection, iss, action, forId, oldValue = null, 
 export default {
     createResponse,
     addaudit,
+    checkPermission,
     // sendEmbed
 };
