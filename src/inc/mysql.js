@@ -1,7 +1,7 @@
 import mysql from 'mysql2/promise';
 import readConfig from './yamlReader.js';
 
-const config = readConfig(process.env.CONFIG_PATH || '../config.yml');
+const config = readConfig();
 
 const pool = mysql.createPool({
     host: config.database.host,

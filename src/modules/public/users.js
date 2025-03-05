@@ -23,7 +23,7 @@ async function UsersList(req, res) {
             }))
         });
     } catch (err) {
-        console.error("[ERROR] Failed to get users list:", err);
+        logger.error("[ERROR] Failed to get users list:", err);
         return res.status(500).json({ 
             error: true, 
             msg: 'Failed to get users list' 

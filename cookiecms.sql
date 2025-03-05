@@ -3,7 +3,7 @@
 CREATE TABLE `audit_log` (
   `id` int NOT NULL AUTO_INCREMENT,
   `iss` int NOT NULL,
-  `action` varchar(255) NOT NULL,
+  `action` int NOT NULL,
   `target_id` int NOT NULL,
   `old_value` text,
   `new_value` text,

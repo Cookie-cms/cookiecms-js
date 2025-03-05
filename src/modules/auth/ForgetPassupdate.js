@@ -3,6 +3,7 @@ import createResponse from '../../inc/_common.js';
 import mysql from '../../inc/mysql.js';
 import readConfig from '../../inc/yamlReader.js';
 import addaudit from '../../inc/_common.js';
+import logger from '../../logger.js';
 
 const config = readConfig();
 
@@ -48,7 +49,7 @@ async function updatepass(req, res) {
         // Hash the new password
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(password, saltRounds);
-        addaudit(connection, codeData.userid, 'password reset', codeData.userid, null, null, null);
+        addaudit(connection, codeData.userid, 2, codeData.userid, null, null, null);
         // Update the user's password in the database
         await connection.query(`
             UPDATE users SET password = ? WHERE id = ?
@@ -62,7 +63,7 @@ async function updatepass(req, res) {
         connection.release();
         return res.status(200).json(createResponse(false, 'Password updated successfully'));
     } catch (err) {
-        console.error("[ERROR] MySQL Error: ", err);
+        logger.error("[ERROR] MySQL Error: ", err);
         return res.status(500).json(createResponse(true, 'Database Error'));
     }
 }

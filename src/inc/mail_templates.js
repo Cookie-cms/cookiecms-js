@@ -1,7 +1,6 @@
 import sendHtmlEmail from './mail.js';
 
 async function sendVerificationEmail(mail, verificationCode, verificationLink, logoUrl) {
-    console.log('sendVerificationEmail', mail, verificationCode, verificationLink, logoUrl);
     await sendHtmlEmail({
         to: mail,
         subject: 'Email Verification',
@@ -55,12 +54,12 @@ async function sendAlert(mail, reason, supportLink) {
 
 async function sendMailUnlinkNotification(old_mail) {
     const mail = old_mail;
-    console.log('Old mail:', mail);
+    console.info('Old mail:', mail);
 
     // Ensure mail is a string
     const emailAddress = typeof mail === 'string' ? mail : mail[0].mail;
 
-    console.log('Sending mail unlink notification to:', emailAddress);
+    console.info('Sending mail unlink notification to:', emailAddress);
 
     await sendHtmlEmail({
         to: emailAddress,

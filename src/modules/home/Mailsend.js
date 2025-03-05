@@ -31,19 +31,23 @@ export async function changemail(req, res) {
     
     try {
         const { mail, password } = req.body;
-        console.log(mail);
-        console.log(password);
+        logger.info(mail);
+        logger.info(password);
         const token = req.headers.authorization?.split(' ')[1];
 
         if (!mail || !password || !token) {
             return res.status(400).json({ error: true, msg: "Incomplete form data provided." });
         }
 
+        if (config.demo === true) {
+            return res.status(403).json({ error: true, msg: "Registration is disabled in demo mode." });
+        }
+
         // Verify token and get user ID
         const status = await isJwtExpiredOrBlacklisted(token, connection, JWT_SECRET_KEY);
 
         const userId = status.data.sub;
-        // console.log(password);  
+        // logger.info(password);  
 
         const validatedMail = validate(mail);
         
@@ -84,7 +88,7 @@ export async function changemail(req, res) {
             [userId]
         );
 
-        addaudit(connection, userId, 'mail', userId, old_mail_result[0].mail, validatedMail, 'mail');
+        addaudit(connection, userId, 7, userId, old_mail_result[0].mail, validatedMail, 'mail');
 
         await connection.query(
             "INSERT INTO verify_codes (userid, code, expire, action) VALUES (?, ?, ?, ?)",
@@ -99,10 +103,10 @@ export async function changemail(req, res) {
         // Send verification email
         await sendVerificationEmail(validatedMail, randomCode, randomCode);
         try {
-            console.log(old_mail_result[0].mail)
+            logger.info(old_mail_result[0].mail)
             await sendMailUnlinkNotification(old_mail_result[0].mail);
         } catch (error) {
-            console.error("[ERROR] Failed to send unlink notification:", error);
+            logger.error("[ERROR] Failed to send unlink notification:", error);
         }
 
         return res.status(200).json({ 
@@ -111,7 +115,7 @@ export async function changemail(req, res) {
         });
 
     } catch (error) {
-        console.error("[ERROR] Change mail error:", error);
+        logger.error("[ERROR] Change mail error:", error);
         return res.status(500).json({ 
             error: true, 
             msg: "An error occurred while changing email" 

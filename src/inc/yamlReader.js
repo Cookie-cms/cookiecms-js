@@ -10,7 +10,7 @@ let cachedConfig = null;
 
 function readConfig() {
     // if (cachedConfig) {
-    //     console.log('Returning cached config:', cachedConfig);
+    //     console.info('Returning cached config:', cachedConfig);
     //     return cachedConfig;
     // }
 
@@ -18,16 +18,7 @@ function readConfig() {
         const filePath = path.resolve(__dirname, '../config.yml');
         const fileContents = fs.readFileSync(filePath, 'utf8');
 
-        // Выводим содержимое файла
-        // console.log('Raw file contents:', fileContents);
-
         const config = yaml.load(fileContents);
-
-        // Выводим распарсенный объект
-        // console.log('Parsed config:', config);
-
-        // Логируем стек вызовов
-        // console.trace('Config read from:', filePath);
 
         cachedConfig = config;
         return config;

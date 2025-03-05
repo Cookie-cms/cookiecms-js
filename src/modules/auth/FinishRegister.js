@@ -5,6 +5,7 @@ import readConfig from '../../inc/yamlReader.js';
 import pool from '../../inc/mysql.js';
 import { addaudit } from '../../inc/_common.js';
 
+import logger from '../../logger.js';
 
 const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
@@ -12,15 +13,15 @@ const JWT_SECRET_KEY = config.securecode;
 async function finishRegister(req, res) {
     const data = req.body;
 
-    // console.log("Incoming request body: " + JSON.stringify(data, null, 2));
+    // logger.info("Incoming request body: " + JSON.stringify(data, null, 2));
 
     if (!data.username) {
-        console.log("Username is required.");
+        logger.info("Username is required.");
         return res.status(400).json({ error: true, msg: 'Username is required.' });
     }
 
     // if (!data.password) {
-    //     console.log("Password cannot be changed.");
+    //     logger.info("Password cannot be changed.");
     //     return res.status(400).json({ error: true, msg: 'Password cannot be changed.' });
     // }
 
@@ -33,7 +34,7 @@ async function finishRegister(req, res) {
     const connection = await pool.getConnection();
     const status = await isJwtExpiredOrBlacklisted(token, connection, JWT_SECRET_KEY);
 
-    // console.log("Token status:", status);
+    // logger.info("Token status:", status);
 
     if (!status.valid) {
         connection.release();
@@ -44,10 +45,10 @@ async function finishRegister(req, res) {
 
     const [user] = await connection.query("SELECT username, uuid, mail_verify, password FROM users WHERE id = ?", [userId]);
 
-    // console.log("User data: " + JSON.stringify(user, null, 2));
+    // logger.info("User data: " + JSON.stringify(user, null, 2));
 
     if (user && user.length && (user[0].username || user[0].uuid)) {
-        console.log("User already has a Player account.");
+        logger.info("User already has a Player account.");
         connection.release();
         return res.status(409).json({ error: true, msg: 'You already have a Player account', url: '/home' });
     }
@@ -55,7 +56,7 @@ async function finishRegister(req, res) {
     const [existingUsername] = await connection.query("SELECT username FROM users WHERE username = ?", [data.username]);
 
     if (existingUsername.length) {
-        console.log("Username already taken.");
+        logger.info("Username already taken.");
         connection.release();
         return res.status(409).json({ error: true, msg: 'Username already taken.' });
     } else {
@@ -65,7 +66,7 @@ async function finishRegister(req, res) {
         await addaudit(
             connection,
             userId,
-            'username',
+            5,
             userId,
             null,  // oldValue
             data.username,  // newValue
@@ -77,11 +78,11 @@ async function finishRegister(req, res) {
         }
 
         const affectedRows = await connection.query("SELECT ROW_COUNT() AS affectedRows");
-        console.log("User update affected rows: " + affectedRows[0].affectedRows);
+        logger.info("User update affected rows: " + affectedRows[0].affectedRows);
         if (affectedRows[0].affectedRows > 0) {
-            // console.log("User updated successfully. Rows affected: " + affectedRows[0].affectedRows);
+            // logger.info("User updated successfully. Rows affected: " + affectedRows[0].affectedRows);
         } else {
-            // console.log("Update executed, but no rows were affected. Rows affected: " + affectedRows[0].affectedRows);
+            // logger.info("Update executed, but no rows were affected. Rows affected: " + affectedRows[0].affectedRows);
         }
     }
 

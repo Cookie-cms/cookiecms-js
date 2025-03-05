@@ -84,9 +84,9 @@ async function initDB() {
 
     await pool.execute(`INSERT INTO skin_user (uid, skin_id) VALUES (?, ?)`, [userID, Skinid]);
 
-    console.log('User created with ID:', userID);
+    console.info('User created with ID:', userID);
 
-    // Audit log
+    // Audit info
 
     const query = `
             INSERT INTO audit_log (iss, action, target_id, old_value, new_value, field_changed, time)

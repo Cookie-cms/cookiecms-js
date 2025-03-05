@@ -6,6 +6,7 @@ import readConfig from '../../inc/yamlReader.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import fs from 'fs/promises';
 import path from 'path';
+import logger from '../../logger.js';
 
 const config = readConfig();
 
@@ -36,7 +37,7 @@ const upload = multer({
 }).single('file');
 
 async function validateUser(connection, userId) {
-  console.log(userId);
+  logger.info(userId);
   const [user] = await connection.query('SELECT id, perms FROM users WHERE id = ?', [userId]);
   if (!user.length) {
     throw new Error('User not found');
@@ -120,14 +121,14 @@ async function uploadSkinRoute(req, res) {
         }
       } catch (error) {
         if (req.file) {
-          await fs.unlink(req.file.path).catch(console.error);
+          await fs.unlink(req.file.path).catch(logger.error);
         }
-        console.log('Error processing upload:', error);
+        logger.info('Error processing upload:', error);
         res.status(500).json({ error: true, msg: 'Error processing upload: ' + error.message });
       }
     });
   } catch (error) {
-    console.error('Error during skin upload:', error);
+    logger.error('Error during skin upload:', error);
     res.status(500).json({ error: true, msg: 'Internal server error' });
   } finally {
     if (connection) connection.release();

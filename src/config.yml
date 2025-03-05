@@ -1,56 +1,52 @@
 NameSite: cookiecms
-securecode: "c8ENvF5zD5ThuM9mTwofBqMLGSEutUrztAeca3LFLKr3v9RRXeUnO7j7nskWbL2y"
+securecode: c8ENvF5zD5ThuM9mTwofBqMLGSEutUrztAeca3LFLKr3v9RRXeUnO7j7nskWbL2y
 ServiceApiToken: 2aiajDNUhW95HlSHcRDJK0psCBBGazwGWbnZi99Vcirb82SIEeNvxqKmqAJlwxuQ
 MaxSavedSkins: 1
-domain: "http://localhost:3000"
-production: demo
-debug: false
-
-# Duplicating audit from site to discord 
-AuditSecret: 
+domain: http://localhost:3000
+demo: false
+logLevel:
+  - info
+AuditSecret:
   enabled: true
   url: https://discord.com/api/webhooks/1343232382773493881/U8gmFOOEL9X83JNv1AIjbDVkL1O2IZGWCmJR8WXRyQq-wcSwgAD1IYFhT_z_EWdDecqe
-
 database:
-  host: "localhost"
-  username: "cookiecms"
-  pass: "cookiecms"
-  db: "cookiecms"
+  host: localhost
+  username: cookiecms
+  pass: cookiecms
+  db: cookiecms
   port: 34002
-
 smtp:
-  Host: "mail.coffeedev.dev"
-  Username: "noreply@coffeedev.dev"
-  Password: "45,chESIo,="
-  SMTPSecure: true  # SSL requires secure: true
-  Port: 465        # SSL Port
-
-
+  Host: mail.coffeedev.dev
+  Username: noreply@coffeedev.dev
+  Password: 98,LGentr,-
+  SMTPSecure: true
+  Port: 465
 discord:
   enabled: true
-  client_id: "1181148727826722816"
-  secret_id: "kl-yQ-6Sa1LE23-o-QhLB_Ny9aSttURp"
+  client_id: '1181148727826722816'
+  secret_id: kl-yQ-6Sa1LE23-o-QhLB_Ny9aSttURp
   scopes:
     - identify
     - email
-  redirect_url: "http://localhost:3000/callback"
-  bot: ""
+  redirect_url: http://localhost:3000/callback
   guild_id: 0
   role: 0
-
-
+features:
+  blogs: true
+  theards: true
+  shop: true
 permissions:
-  0:
+  '0':
     - page.userlist
-  1:
+  '1':
     - profile.changeusername
     - profile.changeskin
     - profile.changemail
     - profile.changepassword
     - profile.discord
-  2:
+  '2':
     - profile.changeskinHD
-  3:
+  '3':
     - admin.users
     - admin.userskins
     - admin.useredit
@@ -58,12 +54,8 @@ permissions:
     - admin.mailsend
     - admin.capes
     - admin.audit
-  4:
+    - discord.1346586587693187093
+  '4':
     - admin.settings
-
-
-servers:
-  name:
-    name:
-    ip:
-    port:
+  '5':
+    - admin.owner

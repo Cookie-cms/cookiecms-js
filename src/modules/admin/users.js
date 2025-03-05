@@ -31,7 +31,7 @@ async function users(req, res) {
         res.json({ error: false, data: audit });
 
     } catch (err) {
-        console.error("[ERROR] Failed to get audit logs:", err);
+        logger.error("[ERROR] Failed to get audit logs:", err);
         res.status(500).json({ error: true, msg: 'Failed to get audit logs' });
     } finally {
         connection.release();

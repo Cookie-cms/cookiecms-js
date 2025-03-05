@@ -4,6 +4,9 @@ npm-debug.log
 yarn-error.log
 yarn-debug.log
 
+src/config.yml
+src/config.backup.yml
+
 
 # Logs
 logs/
@@ -12,6 +15,10 @@ log/
 npm-debug.log*
 yarn-debug.log*
 lerna-debug.log*
+info/
+info/*.info
+info/.*.json
+
 
 # Runtime data
 pids/
@@ -114,3 +121,9 @@ temp/
 pushgit.sh
 pushgit.json
 uploads/
+info/app-2025-02-28.info
+src/config.yml
+src/config.yml
+src/config.yml
+src/config.yml
+src/config.yml

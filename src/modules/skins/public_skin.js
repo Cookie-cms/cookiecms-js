@@ -10,7 +10,7 @@ async function sendFile(res, filePath) {
         res.setHeader('Content-Type', 'image/png');
         fs.createReadStream(filePath).pipe(res);
     } catch (error) {
-        console.error('Error sending file:', error);
+        logger.error('Error sending file:', error);
         res.status(500).send('Internal server error');
     }
 }

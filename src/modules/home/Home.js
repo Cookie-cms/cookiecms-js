@@ -1,6 +1,7 @@
 import mysql from '../../inc/mysql.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import readConfig from '../../inc/yamlReader.js';
+import logger from '../../logger.js';
 
 const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
@@ -31,7 +32,7 @@ async function home(req, res) {
         }
 
         const userId = status.data.sub;
-        console.log(userId);
+        logger.info(userId);
         const [user] = await connection.query("SELECT * FROM users WHERE id = ?", [userId]);
 
         if (!user.length) {
@@ -41,7 +42,7 @@ async function home(req, res) {
 
         if (!user[0].username || !user[0].uuid || !user[0].password) {
             connection.release();
-            console.log(user);
+            logger.info(user);
             const response = {
                 username_create: !user[0].username,
                 password_create: !user[0].password
@@ -57,7 +58,7 @@ async function home(req, res) {
             WHERE skin_user.uid = ?
         `, [userId]);
 
-        console.log(selectedSkin);
+        logger.info(selectedSkin);
 
         const [capes] = await connection.query(`
             SELECT cloaks_lib.uuid AS id, cloaks_lib.name
@@ -133,7 +134,7 @@ async function home(req, res) {
 
         res.status(200).json(userdata);
     } catch (error) {
-        console.error('Error:', error);
+        logger.error('Error:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 }

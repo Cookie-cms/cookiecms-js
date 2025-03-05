@@ -1,6 +1,6 @@
 import mysql from '../../inc/mysql.js';
 import readConfig from '../../inc/yamlReader.js';
-// import logger from './../logger.js';
+import logger from '../../logger.js';
 
 
 const config = readConfig();
@@ -51,7 +51,7 @@ async function ConfirmMail(req, res) {
             return res.status(400).json({ error: true, msg: 'Invalid or expired token' });
         }
     } catch (err) {
-        console.error("[ERROR] MySQL Error: ", err);
+        logger.error("[ERROR] MySQL Error: ", err);
         return res.status(500).json({ error: true, msg: 'Database Error' });
     }
 };

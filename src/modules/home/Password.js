@@ -31,6 +31,10 @@ async function editPassword(req, res) {
         return res.status(401).json({ error: true, msg: 'Invalid token or session expired.' });
     }
 
+    if (config.demo === true) {
+        return res.status(403).json({ error: true, msg: "Registration is disabled in demo mode." });
+    }
+
     try {
         const connection = await mysql.getConnection();
         const status = await isJwtExpiredOrBlacklisted(token, connection, JWT_SECRET_KEY);
@@ -45,7 +49,7 @@ async function editPassword(req, res) {
 
         if (password && new_password) {
             await changePassword(connection, userId, password, new_password);
-            addaudit(connection, userId, 'Password changed', userId, null, null, 'password');
+            addaudit(connection, userId, 6, userId, null, null, 'password');
             res.status(200).json({ error: false, msg: 'Password updated successfully' });
         } else {
             res.status(400).json({ error: true, msg: 'Missing required fields for changing password' });
@@ -53,7 +57,7 @@ async function editPassword(req, res) {
 
         connection.release();
     } catch (err) {
-        console.error("[ERROR] MySQL Error: ", err);
+        logger.error("[ERROR] MySQL Error: ", err);
         res.status(500).json({ error: true, msg: 'Internal Server Error: ' + err.message });
     }
 }

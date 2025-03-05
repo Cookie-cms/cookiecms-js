@@ -26,11 +26,11 @@ export async function discordcreate(req, res) {
     try {
         const connection = await pool.getConnection();        
         const JWT_SECRET_KEY = config.securecode;
-
+ 
         const [discord_link] = await connection.query("SELECT * FROM discord WHERE userid = ?", [meta.id]);
 
         if (discord_link.length === 0 || discord_link[0].conn_id !== meta.conn_id) {
-            console.log('Discord:', discord_link[0].conn_id, 'Meta:', conn_id, 'Discord:', discord_link);
+            logger.info('Discord:', discord_link[0].conn_id, 'Meta:', conn_id, 'Discord:', discord_link);
             connection.release();
             return res.status(404).json({ error: true, msg: 'Account cannot be connected' });
         }
@@ -44,7 +44,7 @@ export async function discordcreate(req, res) {
         }
 
         
-        addaudit(connection, result.insertId, 'registered', result.insertId, null, null, null);
+        addaudit(connection, result.insertId, 1, result.insertId, null, null, null);
         
         const userId = result.insertId;
         logger.info('User ID:', userId);
@@ -62,7 +62,7 @@ export async function discordcreate(req, res) {
             }
         });
     } catch (err) {
-        console.error("[ERROR] MySQL Error: ", err);
+        logger.error("[ERROR] MySQL Error: ", err);
         return res.status(500).json({ error: true, msg: "An error occurred during registration. Please try again later." });
     }
 }

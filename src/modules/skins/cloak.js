@@ -29,7 +29,7 @@ export default async function renderCloak(req, res) {
         res.setHeader('Content-Type', 'image/png');
         res.send(output);
     } catch (error) {
-        console.error('Error rendering cape:', error);
+        logger.error('Error rendering cape:', error);
         res.status(500).send('Error rendering cape image');
     }
 }

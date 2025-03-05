@@ -19,7 +19,7 @@ async function createDirectories() {
     for (const dir of directories) {
         try {
             await fs.mkdir(dir, { recursive: true });
-            console.log(`Directory ${dir} created.`);
+            console.info(`Directory ${dir} created.`);
         } catch (err) {
             console.error(`Error creating directory ${dir}:`, err);
         }
@@ -37,7 +37,7 @@ async function runDbInit() {
                 console.error(`db:init stderr: ${stderr}`);
                 return reject(new Error(stderr));
             }
-            console.log(`db:init stdout: ${stdout}`);
+            console.info(`db:init stdout: ${stdout}`);
             resolve(stdout);
         });
     });
@@ -224,7 +224,7 @@ async function initConfig() {
 
     const yamlStr = yaml.dump(config);
     await fs.writeFile(configPath, yamlStr, 'utf8');
-    console.log('Configuration saved to', configPath);
+    console.info('Configuration saved to', configPath);
 
     await createDirectories();
     await runDbInit();

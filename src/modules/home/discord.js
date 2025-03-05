@@ -59,7 +59,7 @@ async function removediscordconn(req, res) {
         }
 
         const oldDiscordId = (await connection.query('SELECT dsid FROM users WHERE id = ?', [userId]))[0][0].dsid;
-        addaudit(connection, userId, 'Discord connection removed', userId, oldDiscordId, null, 'dsid');
+        addaudit(connection, userId, 8, userId, oldDiscordId, null, 'dsid');
         // Remove discord connection
         await connection.query("UPDATE users SET dsid = NULL WHERE id = ?", [userId]);
 
@@ -69,7 +69,7 @@ async function removediscordconn(req, res) {
         });
 
     } catch (error) {
-        console.error('Error removing discord:', error);
+        logger.error('Error removing discord:', error);
         res.status(500).json({ 
             error: true, 
             msg: 'Internal server error' 

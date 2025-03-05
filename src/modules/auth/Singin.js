@@ -73,7 +73,7 @@ async function login(req, res) {
                 const [discord] = await connection.query(query, [user[0].id]);
 
                 if (discord.length > 0 && discord[0].dsid && discord[0].dsid !== meta.id) {
-                    console.log('Discord:', discord[0].dsid, 'Meta:', meta.id);
+                    logger.info('Discord:', discord[0].dsid, 'Meta:', meta.id);
                     connection.release();
                     return res.status(403).json({ error: true, msg: 'This game account is already linked to another Discord account' });
                 }
@@ -82,12 +82,12 @@ async function login(req, res) {
                 // Step 2: Check if the conn_id matches
                 const [discord_link] = await connection.query("SELECT * FROM discord WHERE userid = ?", [meta.id]);
                 if (discord_link.length === 0 || discord_link[0].conn_id !== meta.conn_id) {
-                    console.log('Discord:', discord_link[0].conn_id, 'Meta:', conn_id, 'Discord:', discord_link);
+                    logger.info('Discord:', discord_link[0].conn_id, 'Meta:', conn_id, 'Discord:', discord_link);
                     connection.release();
                     return res.status(404).json({ error: true, msg: 'Account cannot be connected' });
                 }
 
-                addaudit(connection, user[0].id, 'Discord linked', user[0].id, null, meta.id, 'dsid');
+                addaudit(connection, user[0].id, 12, user[0].id, null, meta.id, 'dsid');
                 
                 // Step 3: Update the MySQL database
                 await connection.query("UPDATE users SET dsid = ? WHERE id = ?", [meta.id, user[0].id]);
@@ -100,7 +100,7 @@ async function login(req, res) {
                 iat: Math.floor(Date.now() / 1000),
                 exp: Math.floor(Date.now() / 1000) + 3600,
             };
-            console.log('Payload:', );
+            logger.info('Payload:', );
 
             try {
                 const userId = user[0].id;
@@ -114,7 +114,7 @@ async function login(req, res) {
                     data: { jwt: token }
                 });
             } catch (err) {
-                console.error("[ERROR] JWT Error: ", err);
+                logger.error("[ERROR] JWT Error: ", err);
                 connection.release();
                 return res.status(500).json({ error: true, msg: 'JWT Error' });
             }
@@ -123,7 +123,7 @@ async function login(req, res) {
             return res.status(400).json({ error: true, msg: 'Incorrect username or password' });
         }
     } catch (err) {
-        console.error("[ERROR] MySQL Error: ", err);
+        logger.error("[ERROR] MySQL Error: ", err);
         return res.status(500).json({ error: true, msg: 'Database Error' });
     }
 }

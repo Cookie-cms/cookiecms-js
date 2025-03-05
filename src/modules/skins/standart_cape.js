@@ -1,6 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import mysql from '../../inc/mysql.js';
+import logger from '../../logger.js';
 
 async function sendFile(res, filePath) {
     try {
@@ -10,7 +11,7 @@ async function sendFile(res, filePath) {
         res.setHeader('Content-Type', 'image/png');
         fs.createReadStream(filePath).pipe(res);
     } catch (error) {
-        console.error('Error sending file:', error);
+        logger.error('Error sending file:', error);
         res.status(500).send('Internal server error');
     }
 }
@@ -29,7 +30,7 @@ export async function getCloakFile(req, res) {
             WHERE u.uuid = ?
         `, [req.params.uuid]);
 
-        console.log(skin);
+        logger.debug(skin);
 
         if (!skin.length || !skin[0].cloak_id || skin[0].cloak_id === 'null') {
             return res.status(404).send('Cloak not found');
@@ -39,7 +40,7 @@ export async function getCloakFile(req, res) {
         return sendFile(res, filePath);
 
     } catch (error) {
-        console.error('Error getting cloak:', error);
+        logger.error('Error getting cloak:', error);
         res.status(500).send('Internal server error');
     } finally {
         if (connection) {

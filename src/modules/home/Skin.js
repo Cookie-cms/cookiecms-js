@@ -76,8 +76,8 @@ async function editSkin(req, res) {
             }
 
             if (cloakid && await isownercape(connection, userId, cloakid)) {
-                console.log(cloakid)
-                console.log(await isownercape(connection, userId, cloakid))
+                logger.info(cloakid)
+                logger.info(await isownercape(connection, userId, cloakid))
                 res.status(403).json({ error: true, msg: 'You do not own this cape' });
                 return;
             }
@@ -124,7 +124,7 @@ async function editSkin(req, res) {
 
         connection.release();
     } catch (err) {
-        console.error("[ERROR] MySQL Error: ", err);
+        logger.error("[ERROR] MySQL Error: ", err);
         res.status(500).json({ error: true, msg: 'Internal Server Error: ' + err.message });
     }
 }

@@ -28,7 +28,7 @@ async function downloadFile(url, folder, filename) {
         const filePath = path.join(folder, filename);
 
         await fs.writeFile(filePath, response.data);
-        console.log(`Файл ${filename} загружен в ${folder}`);
+        console.info(`Файл ${filename} загружен в ${folder}`);
         return filePath;
     } catch (error) {
         console.error(`Ошибка загрузки файла ${url}:`, error);
@@ -63,7 +63,7 @@ async function initDB() {
         );
 
         const userID = result.insertId;
-        console.log('User created with ID:', userID);
+        console.info('User created with ID:', userID);
 
         // Создаем UUID для плащей и скина
         const Skinid = uuidv4();
@@ -114,7 +114,7 @@ async function initDB() {
             [userID, 'Created', userID, null, null, 'users', time]
         );
 
-        console.log('User, skin, and cloaks added successfully.');
+        console.info('User, skin, and cloaks added successfully.');
 
         // Закрываем пул соединений
         await pool.end();

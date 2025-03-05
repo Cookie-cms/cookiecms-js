@@ -7,6 +7,7 @@ const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
 
 export async function user_udp(req, res) {
+    const connection = await mysql.getConnection();
     const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
     if (!token) {
         return res.status(401).json({ error: true, msg: 'Invalid JWT', code: 401 });
@@ -23,12 +24,12 @@ export async function user_udp(req, res) {
             return res.status(403).json({ error: 'Insufficient permissions' });
         }
 
-        const { identifier } = req.params;
+        const { id } = req.params;
         const updateData = req.body;
 
-        // Validate identifier
-        if (!identifier) {
-            return res.status(400).json({ error: 'User identifier is required' });
+        // Validate id
+        if (!id) {
+            return res.status(400).json({ error: 'User id is required' });
         }
 
         // Build dynamic update query
@@ -57,8 +58,8 @@ export async function user_udp(req, res) {
             return res.status(400).json({ error: 'No valid fields to update' });
         }
 
-        // Add identifier to values array
-        values.push(identifier);
+        // Add id to values array
+        values.push(id);
 
         const query = `
             UPDATE users 
@@ -66,7 +67,7 @@ export async function user_udp(req, res) {
             WHERE id = ? OR username = ?
         `;
 
-        const [result] = await mysql.execute(query, [...values, identifier]);
+        const [result] = await mysql.execute(query, [...values, id]);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'User not found' });
@@ -78,7 +79,9 @@ export async function user_udp(req, res) {
         });
 
     } catch (error) {
-        console.error('Error updating user:', error);
+        logger.error('Error updating user:', error);
         return res.status(500).json({ error: 'Internal server error' });
     }
 }
+
+export default user_udp;

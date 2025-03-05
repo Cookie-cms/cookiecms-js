@@ -55,7 +55,7 @@ export async function validate_code_fp(req, res) {
         connection.release();
         return res.sendStatus(204);
     } catch (err) {
-        console.error("[ERROR] MySQL Error: ", err);
+        logger.error("[ERROR] MySQL Error: ", err);
         return res.status(500).json(createResponse(true, 'Database Error'));
     }
 }

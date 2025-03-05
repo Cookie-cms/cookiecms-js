@@ -37,6 +37,10 @@ async function username(req, res) {
         return res.status(401).json({ error: true, msg: 'Invalid token or session expired.' });
     }
 
+    if (config.demo === true) {
+        return res.status(403).json({ error: true, msg: "Registration is disabled in demo mode." });
+    }
+
     try {
         const connection = await mysql.getConnection();
         const status = await isJwtExpiredOrBlacklisted(token, connection, JWT_SECRET_KEY);
@@ -51,7 +55,7 @@ async function username(req, res) {
 
         if (username && password) {
             const oldUsername = (await connection.query("SELECT username FROM users WHERE id = ?", [userId]))[0][0].username;
-            addaudit(connection, userId, 'Username updated', userId, oldUsername, username, 'username');
+            addaudit(connection, userId, 5, userId, oldUsername, username, 'username');
             const updatedUsername = await updateUsername(connection, userId, username, password);
             res.status(200).json({ error: false, msg: 'Username updated successfully', username: updatedUsername });
         } else {
@@ -60,7 +64,7 @@ async function username(req, res) {
 
         connection.release();
     } catch (err) {
-        console.error("[ERROR] MySQL Error: ", err);
+        logger.error("[ERROR] MySQL Error: ", err);
         res.status(500).json({ error: true, msg: 'Internal Server Error: ' + err.message });
     }
 }

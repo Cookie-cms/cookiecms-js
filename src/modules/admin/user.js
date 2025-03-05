@@ -3,7 +3,7 @@ import readConfig from '../../inc/yamlReader.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import Mail from 'nodemailer/lib/mailer/index.js';
 import {checkPermission} from '../../inc/_common.js';
-
+import logger from '../../logger.js';
 
 const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
@@ -33,7 +33,7 @@ async function getUserSkins(req, res) {
         });
 
     } catch (err) {
-        console.error("[ERROR] Failed to get user skins:", err);
+        logger.error("[ERROR] Failed to get user skins:", err);
         res.status(500).json({ error: true, msg: 'Failed to get skins' });
     } finally {
         connection.release();
@@ -59,7 +59,7 @@ async function getUserSkins_s(connection, userId) {
 //     return skins;
 // }
 
-async function user(req, res) {
+export async function user(req, res) {
     const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
 
     const { id } = req.params;
@@ -84,7 +84,7 @@ async function user(req, res) {
         }
     
 
-        console.log(userId);
+        logger.info(userId);
         const [user] = await connection.query("SELECT * FROM users WHERE id = ?", [id]);
 
         if (!user.length) {
@@ -101,7 +101,7 @@ async function user(req, res) {
             WHERE skin_user.uid = ?
         `, [id]);
 
-        console.log(selectedSkin);
+        logger.info(selectedSkin);
 
         const [capes] = await connection.query(`
             SELECT cloaks_lib.uuid AS id, cloaks_lib.name
@@ -180,7 +180,7 @@ async function user(req, res) {
 
         res.status(200).json(userdata);
     } catch (error) {
-        console.error('Error:', error);
+        logger.error('Error:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 }
@@ -226,22 +226,22 @@ export async function userupdate(req, res) {
 
         // Add audit entries for changed fields
         if (username !== currentUser[0].username) {
-            await addaudit(connection, req.userId, 'username_change', id, 
+            await addaudit(connection, req.userId, 11, id, 
                 currentUser[0].username, username, 'username');
         }
 
         if (uuid !== currentUser[0].uuid) {
-            await addaudit(connection, req.userId, 'uuid_change', id, 
+            await addaudit(connection, req.userId, 11, id, 
                 currentUser[0].uuid, uuid, 'uuid');
         }
 
         if (mail !== currentUser[0].mail) {
-            await addaudit(connection, req.userId, 'mail_change', id, 
+            await addaudit(connection, req.userId, 11, id, 
                 currentUser[0].mail, mail, 'mail');
         }
 
         if (mail_verify !== currentUser[0].mail_verify) {
-            await addaudit(connection, req.userId, 'mail_verify_change', id, 
+            await addaudit(connection, req.userId, 11, id, 
                 currentUser[0].mail_verify, mail_verify, 'mail_verify');
         }
 
@@ -251,7 +251,7 @@ export async function userupdate(req, res) {
         });
 
     } catch (error) {
-        console.error('[ERROR] User update failed:', error);
+        logger.error('[ERROR] User update failed:', error);
         return res.status(500).json({ 
             error: true, 
             msg: 'Failed to update user' 
@@ -261,4 +261,71 @@ export async function userupdate(req, res) {
     }
 }
 
-export { getUserSkins, user };
+export async function addcape(req, res) {
+    const connection = await mysql.getConnection();
+    try {
+        // Check permissions
+        const hasPermission = await checkPermission(connection, req.userId, 'admin.users');
+        if (!hasPermission) {
+            return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
+        }
+
+        const { user, cape } = req.body;
+
+        // Insert new capes if provided
+        if (cape && cape.length > 0) {
+            const capeValues = cape.map(capeId => [user, capeId]);
+            await connection.query(
+                "INSERT INTO cloaks_users (uid, cloak_id) VALUES ?",
+                [capeValues]
+            );
+        }
+
+        res.json({ 
+            error: false, 
+            msg: 'Capes updated successfully'
+        });
+
+    } catch (error) {
+        logger.error('[ERROR] Cape update failed:', error);
+        return res.status(500).json({ 
+            error: true, 
+            msg: 'Failed to update capes' 
+        });
+    } finally {
+        connection.release();
+    }
+}
+
+export async function RemoveCape(req, res) {
+    const connection = await mysql.getConnection();
+    try {
+        // Check permissions
+        const hasPermission = await checkPermission(connection, req.userId, 'admin.users');
+        if (!hasPermission) {
+            return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
+        }
+
+        const { user, cape } = req.body;
+
+        // Remove capes if provided
+        if (cape && cape.length > 0) {
+            await connection.query(
+                "DELETE FROM cloaks_users WHERE uid = ? AND cloak_id IN (?)",
+                [user, cape]
+            );
+        }
+
+        res.json({ 
+            error: false,
+            msg: 'Capes removed successfully'
+        });
+
+    } catch (error) {
+        logger.error('[ERROR] Cape removal failed:', error);
+        return res.status(500).json({ 
+            error: true, 
+            msg: 'Failed to remove capes' 
+        });
+    }
+}

@@ -6,7 +6,7 @@ import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 // import sendEmbed from '../../inc/_common.js';
 import { sendVerificationEmail, sendWelcomeEmail } from '../../inc/mail_templates.js';
-import addaudit from '../../inc/_common.js';
+import {addaudit} from '../../inc/_common.js';
 
 const config = readConfig();
 
@@ -19,7 +19,7 @@ function validate(data) {
 export async function signup(req, res) {
     const { mail, password } = req.body;
 
-    if (config.production = "demo") {
+    if (config.demo === true) {
         return res.status(403).json({ error: true, msg: "Registration is disabled in demo mode." });
     }
 
@@ -54,7 +54,7 @@ export async function signup(req, res) {
 
         const userID = result.insertId;
 
-        addaudit(connection, userID, 'registered', userID, null, null, null);
+        addaudit(connection, userID, 1, userID, null, null, null);
 
 
         const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -76,7 +76,7 @@ export async function signup(req, res) {
         connection.release();
         return res.status(200).json({ error: false, msg: "Registration successful. Please check your mail to verify.", url: "/signin" });
     } catch (err) {
-        console.error("[ERROR] MySQL Error: ", err);
+        logger.error("[ERROR] MySQL Error: ", err);
         return res.status(500).json({ error: true, msg: "An error occurred during registration. Please try again later." });
     }
 }

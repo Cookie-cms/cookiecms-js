@@ -17,7 +17,7 @@ async function generateFileHash(filePath) {
         const fileBuffer = await fs.readFile(filePath);
         return crypto.createHash('sha256').update(fileBuffer).digest('hex');
     } catch (error) {
-        console.error(`Error generating hash for file ${filePath}:`, error);
+        logger.error(`Error generating hash for file ${filePath}:`, error);
         return null;
     }
 }
@@ -77,7 +77,7 @@ async function getSkinData(userUuid) {
 
         return response;
     } catch (error) {
-        console.error('Error getting skin data:', error);
+        logger.error('Error getting skin data:', error);
         throw error;
     } finally {
         if (connection) {

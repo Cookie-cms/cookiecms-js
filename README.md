@@ -4,15 +4,6 @@ This is a simple Express.js application that demonstrates the basic structure an
 
 ## Project Structure
 
-```
-my-express-app
-├── src
-│   ├── app.js          # Entry point of the application
-│   ├── routes
-│   │   └── index.js    # Route definitions
-├── package.json        # NPM configuration file
-└── README.md           # Project documentation
-```
 
 ## Installation
 

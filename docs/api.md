@@ -1076,7 +1076,7 @@ line of changing discord
 
 
 **Connecting Discord to Your Account:**  
-- **New Connection**: Log into the Discord account you wish to connect.  
+- **New Connection**: info into the Discord account you wish to connect.  
 - **Requirements**:  
   - The Discord account must have the **same email** as your current account.  
 
@@ -1092,11 +1092,11 @@ line of changing discord
 2. **Change Connection**:  
    - Verify the **code from your old email**.  
    - Enter your **password**.  
-   - Log in to the new Discord account and confirm the change.
+   - info in to the new Discord account and confirm the change.
 
 
 **Creating Account via Discord:**  
-1. Click "Sign Up with Discord" and log into your Discord account.  
+1. Click "Sign Up with Discord" and info into your Discord account.  
 2. Authorize the application.  
 3. Verify your email address.  
 4. Set and confirm a new password to complete the account creation.

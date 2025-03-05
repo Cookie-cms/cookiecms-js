@@ -13,7 +13,7 @@ export default async function renderBody(req, res) {
         res.setHeader('Content-Type', 'image/png');
         res.send(output);
     } catch (error) {
-        console.error('Error rendering body:', error);
+        logger.error('Error rendering body:', error);
         res.status(500).send('Error rendering body image');
     }
 }

@@ -3,6 +3,7 @@ import auth from '../modules/auth/index.js';
 import home from '../modules/home/index.js';
 import skins from '../modules/skins/index.js';
 import admin from '../modules/admin/index.js';
+import service from '../modules/service/index.js';
 import UsersList from '../modules/public/users.js';
 import multer from 'multer';
 
@@ -40,32 +41,34 @@ router.post('/home/edit/removediscord', home.removediscordconn);
 // Admin routes
 router.get('/admin/users', admin.users);
 router.get('/admin/user/:id', admin.user);
+router.put('/admin/user/:id', admin.user_udp);
 
 router.post('/admin/cape', admin.uploadCape);
 router.delete('/admin/cape', admin.deleteCape);
 router.put('/admin/cape', admin.updateCape);
 
 router.get('/admin/audit', admin.audit);
-
-
-
-
-
+router.post('/admin/user/role/', admin.user_role);
+router.post('/admin/user/cape/:id', admin.uploadCape);
 router.get('/admin/allcapes', admin.allcapes);
 router.get('/admin/skins', admin.getSkins);
 
-router.post('/admin/user', (req, res) => {
-    res.send('Welcome to the Express app!');
-});
-router.post('/admin/mail', (req, res) => {
-    res.send('Welcome to the Express app!');
-});
-router.post('/admin/user/role/:id', (req, res) => {
-    res.send('Welcome to the Express app!');
-});
-router.post('/admin/user/cape/:id', (req, res) => {
-    res.send('Welcome to the Express app!');
-});
+router.get('/admin/metrics', admin.userRegistrationStats);
+router.get('/admin/metrics/users', admin.allusers);
+router.get('/admin/metrics/skins', admin.skins);
+
+// router.post('/admin/user', (req, res) => {
+//     res.send('Welcome to the Express app!');
+// });
+// router.post('/admin/mail', (req, res) => {
+//     res.send('Welcome to the Express app!');
+// });
+// router.post('/admin/user/role/:id', (req, res) => {
+//     res.send('Welcome to the Express app!');
+// });
+// router.post('/admin/user/cape/:id', (req, res) => {
+//     res.send('Welcome to the Express app!');
+// });
 
 
 
@@ -92,6 +95,10 @@ router.get('/skin/public/cape/:uuid', skins.getFileByName_capes);
 router.post('/service/user', (req, res) => {
     res.send('Welcome to the Express app!');
 });
+
+router.get('/service/settings', service.getSettings);
+router.put('/service/settings', service.updateSettings);
+
 
 
 export default router;

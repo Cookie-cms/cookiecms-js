@@ -1,4 +1,5 @@
 import mysql from '../../inc/mysql.js';
+import logger from '../../logger.js';
 
 
 export async function allcapes(req, res) {
@@ -15,7 +16,7 @@ export async function allcapes(req, res) {
         
 
     } catch (error) {
-        console.error('Error getting skin:', error);
+        logger.error('Error getting skin:', error);
         res.status(500).send('Internal server error');
     } finally {
         if (connection) {

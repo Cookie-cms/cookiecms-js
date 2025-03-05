@@ -1,5 +1,6 @@
 import mysql from '../../inc/mysql.js';
 import readConfig from '../../inc/yamlReader.js';
+import logger from '../../logger.js';
 
 const config = readConfig(process.env.CONFIG_PATH || '../config.yml');
 
@@ -54,7 +55,7 @@ async function resetPassword(req, res) {
         connection.release();
         return res.status(200).json({ error: false, msg: 'Code for resting password sent.' });
     } catch (err) {
-        console.error("[ERROR] MySQL Error: ", err);
+        logger.error("[ERROR] MySQL Error: ", err);
         return res.status(500).json({ error: true, msg: 'An error occurred while generating the verification code. Please try again.' });
     }
 }

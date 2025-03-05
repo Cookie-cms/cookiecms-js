@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import multer from 'multer';
 import fs from 'fs/promises';
 import path from 'path';
+import logger from '../../logger.js';
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -72,7 +73,7 @@ async function uploadCape(req, res) {
             res.json({ error: false, msg: 'Cape uploaded', id: uuid });
         });
     } catch (err) {
-        console.error("[ERROR] Cape upload failed:", err);
+        logger.error("[ERROR] Cape upload failed:", err);
         res.status(500).json({ error: true, msg: 'Upload failed' });
     } finally {
         connection.release();
@@ -97,7 +98,7 @@ async function updateCape(req, res) {
 
         res.json({ error: false, msg: 'Cape updated' });
     } catch (err) {
-        console.error("[ERROR] Cape update failed:", err);
+        logger.error("[ERROR] Cape update failed:", err);
         res.status(500).json({ error: true, msg: 'Update failed' });
     } finally {
         connection.release();
@@ -131,7 +132,7 @@ async function deleteCape(req, res) {
 
         res.json({ error: false, msg: 'Cape deleted' });
     } catch (err) {
-        console.error("[ERROR] Cape deletion failed:", err);
+        logger.error("[ERROR] Cape deletion failed:", err);
         res.status(500).json({ error: true, msg: 'Deletion failed' });
     } finally {
         connection.release();

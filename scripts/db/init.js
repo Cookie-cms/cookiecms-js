@@ -28,7 +28,7 @@ async function initDB() {
   try {
     const confirmed = await checkDatabaseReset();
     if (!confirmed) {
-      console.log('Database reset cancelled');
+      console.info('Database reset cancelled');
       process.exit(0);
     }
 
@@ -42,12 +42,12 @@ async function initDB() {
       multipleStatements: true
     });
 
-    console.log("Connected to database!");
+    console.info("Connected to database!");
     
     const sql = await fs.readFile("./cookiecms.sql", "utf8");
     await pool.query(sql);
     
-    console.log("Database initialized successfully!");
+    console.info("Database initialized successfully!");
     await pool.end();
   } catch (error) {
     console.error("Error initializing database:", error);

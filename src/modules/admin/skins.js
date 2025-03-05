@@ -38,7 +38,7 @@ async function getSkins(req, res) {
         res.json({ error: false, data: skins_data });
 
     } catch (err) {
-        console.error("[ERROR] Cape deletion failed:", err);
+        logger.error("[ERROR] Cape deletion failed:", err);
         res.status(500).json({ error: true, msg: 'Deletion failed' });
     } finally {
         connection.release();

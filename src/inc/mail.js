@@ -16,10 +16,10 @@ const transporter = nodemailer.createTransport({
 
 async function sendHtmlEmail({ to, subject, templatePath, variables }) {
     try {
-        console.log('Sending email to:', to);
-        console.log('Email subject:', subject);
-        console.log('Template path:', templatePath);
-        console.log('Variables:', variables);
+        logger.debug('Sending email to:', to);
+        logger.debug('Email subject:', subject);
+        logger.debug('Template path:', templatePath);
+        logger.debug('Variables:', variables);
 
         // Read HTML template
         let html = await readFile(templatePath, 'utf8');
@@ -40,7 +40,7 @@ async function sendHtmlEmail({ to, subject, templatePath, variables }) {
             html
         });
     } catch (error) {
-        console.error('Mail send error:', error);
+        logger.error('Mail send error:', error);
         throw new Error('Failed to send email');
     }
 }

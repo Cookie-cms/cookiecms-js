@@ -10,7 +10,7 @@ async function sendFile(res, filePath) {
         res.setHeader('Content-Type', 'image/png');
         fs.createReadStream(filePath).pipe(res);
     } catch (error) {
-        console.error('Error sending file:', error);
+        logger.error('Error sending file:', error);
         res.status(500).send('Internal server error');
     }
 }
@@ -39,7 +39,7 @@ export async function getSkinFile(req, res) {
         return sendFile(res, filePath);
 
     } catch (error) {
-        console.error('Error getting skin:', error);
+        logger.error('Error getting skin:', error);
         res.status(500).send('Internal server error');
     } finally {
         if (connection) {
