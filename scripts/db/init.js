@@ -1,10 +1,16 @@
 import inquirer from 'inquirer';
-import mysql from 'mysql2/promise';
+import knex from 'knex';
 import fs from 'fs/promises';
+import path from 'path';
 
 async function getConnectionData() {
-  const data = await fs.readFile("./.cc.json", "utf8");
-  return JSON.parse(data);
+  try {
+    const data = await fs.readFile("./.cc.json", "utf8");
+    return JSON.parse(data);
+  } catch (error) {
+    console.error("Error reading config:", error);
+    process.exit(1);
+  }
 }
 
 async function checkDatabaseReset() {
@@ -33,22 +39,42 @@ async function initDB() {
     }
 
     const conn_data = await getConnectionData();
-    const pool = await mysql.createPool({
-      host: conn_data.host,
-      user: conn_data.username,
-      password: conn_data.pass,
-      database: conn_data.db,
-      port: conn_data.port,
-      multipleStatements: true
+    
+    // Create knex instance
+    const db = knex({
+      client: conn_data.type,
+      connection: {
+        host: conn_data.host,
+        user: conn_data.username,
+        password: conn_data.pass,
+        database: conn_data.db,
+        port: conn_data.port
+      }
     });
 
     console.info("Connected to database!");
     
-    const sql = await fs.readFile("./cookiecms.sql", "utf8");
-    await pool.query(sql);
+    // Run the migrations
+    console.info("Running migrations...");
+    await db.migrate.latest();
+    
+    // Run the seeds if requested
+    const seedAnswer = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'runSeeds',
+        message: 'Do you want to seed the database with initial data?',
+        default: true
+      }
+    ]);
+    
+    if (seedAnswer.runSeeds) {
+      console.info("Running seeds...");
+      await db.seed.run();
+    }
     
     console.info("Database initialized successfully!");
-    await pool.end();
+    await db.destroy();
   } catch (error) {
     console.error("Error initializing database:", error);
     process.exit(1);

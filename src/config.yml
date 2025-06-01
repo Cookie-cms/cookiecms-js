@@ -6,6 +6,8 @@ domain: http://localhost:3000
 demo: false
 logLevel:
   - info
+  - warn
+  - error
 AuditSecret:
   enabled: true
   url: https://discord.com/api/webhooks/1343232382773493881/U8gmFOOEL9X83JNv1AIjbDVkL1O2IZGWCmJR8WXRyQq-wcSwgAD1IYFhT_z_EWdDecqe
@@ -14,7 +16,7 @@ database:
   username: cookiecms
   pass: cookiecms
   db: cookiecms
-  port: 34002
+  port: 5432
 smtp:
   Host: mail.coffeedev.dev
   Username: noreply@coffeedev.dev

@@ -5,7 +5,7 @@ import logger from '../../logger.js';
 import readConfig from '../../inc/yamlReader.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import { checkPermission } from '../../inc/_common.js';
-import pool from '../../inc/mysql.js';
+import knex from '../../inc/knex.js';
 
 const SENSITIVE_KEYS = [
     "securecode", "ServiceApiToken", "pass", "Password",
@@ -46,16 +46,15 @@ const getSettings = async (req, res) => {
     try {
         const config = readConfig();
         const { primaryToken, authToken } = extractTokens(req);
-        const conn = await pool.getConnection();
-        
 
         if (!primaryToken) return res.status(401).json({ error: true, msg: "Authorization token required" });
         if (primaryToken !== config.ServiceApiToken) return res.status(403).json({ error: true, msg: "Invalid token" });
         
-        const valid = await isJwtExpiredOrBlacklisted(authToken, conn, config.securecode);
-        if (!valid) return res.status(401).json({ error: true, msg: "Invalid JWT" });
+        const valid = await isJwtExpiredOrBlacklisted(authToken, config.securecode);
+        if (!valid.valid) return res.status(401).json({ error: true, msg: "Invalid JWT" });
         
-        const permissions = await checkPermission(pool, valid.data.sub, 'admin.settings');
+        const userId = valid.data.sub;
+        const permissions = await checkPermission(userId, 'admin.settings');
         if (!permissions) return res.status(403).json({ error: true, msg: "Insufficient permissions" });
         
         logger.info('Settings retrieved successfully');
@@ -71,15 +70,15 @@ const updateSettings = async (req, res) => {
         const config = readConfig();
 
         const { primaryToken, authToken } = extractTokens(req);
-        const conn = await pool.getConnection();
 
         if (!primaryToken) return res.status(401).json({ error: true, msg: "Authorization token required" });
         if (primaryToken !== config.ServiceApiToken) return res.status(403).json({ error: true, msg: "Invalid token" });
         
-        const valid = await isJwtExpiredOrBlacklisted(authToken, conn, config.securecode);
-        if (!valid) return res.status(401).json({ error: true, msg: "Invalid JWT" });
+        const valid = await isJwtExpiredOrBlacklisted(authToken, config.securecode);
+        if (!valid.valid) return res.status(401).json({ error: true, msg: "Invalid JWT" });
         
-        const permissions = await checkPermission(pool, valid.data.sub, 'admin.settings');
+        const userId = valid.data.sub;
+        const permissions = await checkPermission(userId, 'admin.settings');
         if (!permissions) return res.status(403).json({ error: true, msg: "Insufficient permissions" });
         
         const newSettings = req.body;

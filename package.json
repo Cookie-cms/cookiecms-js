@@ -19,6 +19,7 @@
     "cors": "^2.8.5",
     "express": "latest",
     "express-formidable": "^1.2.0",
+    "http": "^0.0.1-security",
     "inquirer": "^12.4.1",
     "jimp": "^1.6.0",
     "js-yaml": "^4.1.0",

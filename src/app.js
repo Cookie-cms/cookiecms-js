@@ -5,7 +5,7 @@ import sendHtmlEmail from './inc/mail.js';
 import cors from 'cors';
 import createResponse from './inc/_common.js';
 import knex from './inc/knex.js';
-import { getDefaultStatusMessage } from 'http';
+// import { getDefaultStatusMessage } from 'http';
 
 export default { createResponse };
 
@@ -16,34 +16,34 @@ app.use(cors({
 }));
 
 // Test database connection
-async function testDatabaseConnection() {
-    try {
-        await knex.raw('SELECT 1');
-        logger.info('Database connection established successfully');
-    } catch (err) {
-        logger.error('Error connecting to database:', err);
-        process.exit(1);
-    }
-}
+// async function testDatabaseConnection() {
+//     try {
+//         await knex.raw('SELECT 1');
+//         logger.info('Database connection established successfully');
+//     } catch (err) {
+//         logger.error('Error connecting to database:', err);
+//         process.exit(1);
+//     }
+// }
 
-testDatabaseConnection();
+// testDatabaseConnection();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use((req, res, next) => {
-    res.on('finish', () => {
-        let { ip, method, originalUrl, httpVersion } = req;
-        const status = res.statusCode;
-        const statusMessage = res.statusMessage || getDefaultStatusMessage(status);
+// app.use((req, res, next) => {
+//     res.on('finish', () => {
+//         let { ip, method, originalUrl, httpVersion } = req;
+//         const status = res.statusCode;
+//         // const statusMessage = res.statusMessage || getDefaultStatusMessage(status);
 
-        ip = ip.replace(/^::ffff:/, '');
+//         ip = ip.replace(/^::ffff:/, '');
 
-        const logMessage = `${ip} - "${method} ${originalUrl} HTTP/${httpVersion}" ${status} ${statusMessage}`;
-        logger.info(logMessage);
-    });
-    next();
-});
+//         const logMessage = `${ip} - "${method} ${originalUrl} HTTP/${httpVersion}" ${status} ${statusMessage}`;
+//         logger.info(logMessage);
+//     });
+//     next();
+// });
 
 app.use('/api', routes);
 
