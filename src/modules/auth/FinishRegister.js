@@ -2,9 +2,8 @@ import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import readConfig from '../../inc/yamlReader.js';
-import pool from '../../inc/mysql.js';
+import knex from '../../inc/knex.js';
 import { addaudit } from '../../inc/_common.js';
-
 import logger from '../../logger.js';
 
 const config = readConfig();
@@ -20,74 +19,87 @@ async function finishRegister(req, res) {
         return res.status(400).json({ error: true, msg: 'Username is required.' });
     }
 
-    // if (!data.password) {
-    //     logger.info("Password cannot be changed.");
-    //     return res.status(400).json({ error: true, msg: 'Password cannot be changed.' });
-    // }
-
     const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
 
     if (!token) {
         return res.status(401).json({ error: true, msg: 'Invalid JWT', code: 401 });
     }
 
-    const connection = await pool.getConnection();
-    const status = await isJwtExpiredOrBlacklisted(token, connection, JWT_SECRET_KEY);
+    const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
 
     // logger.info("Token status:", status);
 
     if (!status.valid) {
-        connection.release();
         return res.status(401).json({ error: true, msg: status.message });
     }
 
     const userId = status.data.sub;
 
-    const [user] = await connection.query("SELECT username, uuid, mail_verify, password FROM users WHERE id = ?", [userId]);
+    try {
+        const user = await knex('users')
+            .where('id', userId)
+            .select('username', 'uuid', 'mail_verify', 'password')
+            .first();
 
-    // logger.info("User data: " + JSON.stringify(user, null, 2));
+        // logger.info("User data: " + JSON.stringify(user, null, 2));
 
-    if (user && user.length && (user[0].username || user[0].uuid)) {
-        logger.info("User already has a Player account.");
-        connection.release();
-        return res.status(409).json({ error: true, msg: 'You already have a Player account', url: '/home' });
-    }
-
-    const [existingUsername] = await connection.query("SELECT username FROM users WHERE username = ?", [data.username]);
-
-    if (existingUsername.length) {
-        logger.info("Username already taken.");
-        connection.release();
-        return res.status(409).json({ error: true, msg: 'Username already taken.' });
-    } else {
-        const newUuid = uuidv4();
-        await connection.query("UPDATE users SET uuid = ?, username = ? WHERE id = ?", [newUuid, data.username, userId]);
-
-        await addaudit(
-            connection,
-            userId,
-            5,
-            userId,
-            null,  // oldValue
-            data.username,  // newValue
-            'users-update'  // fieldChanged
-        );
-        if (data.password) {
-            const hashedPassword = await bcrypt.hash(data.password, 10);
-            await connection.query("UPDATE users SET password = ? WHERE id = ?", [hashedPassword, userId]);
+        if (user && (user.username || user.uuid)) {
+            logger.info("User already has a Player account.");
+            return res.status(409).json({ error: true, msg: 'You already have a Player account', url: '/home' });
         }
 
-        const affectedRows = await connection.query("SELECT ROW_COUNT() AS affectedRows");
-        logger.info("User update affected rows: " + affectedRows[0].affectedRows);
-        if (affectedRows[0].affectedRows > 0) {
-            // logger.info("User updated successfully. Rows affected: " + affectedRows[0].affectedRows);
+        const existingUsername = await knex('users')
+            .where('username', data.username)
+            .first();
+
+        if (existingUsername) {
+            logger.info("Username already taken.");
+            return res.status(409).json({ error: true, msg: 'Username already taken.' });
         } else {
-            // logger.info("Update executed, but no rows were affected. Rows affected: " + affectedRows[0].affectedRows);
-        }
-    }
+            const newUuid = uuidv4();
 
-    connection.release();
-    return res.status(200).json({ success: true, msg: 'Registration completed successfully', url: '/home' });
+            // Using a transaction to ensure data consistency
+            await knex.transaction(async (trx) => {
+                // Update user
+                await trx('users')
+                    .where('id', userId)
+                    .update({
+                        uuid: newUuid,
+                        username: data.username
+                    });
+
+                // Add audit log
+                await addaudit(
+                    userId,
+                    5,
+                    userId,
+                    null,  // oldValue
+                    data.username,  // newValue
+                    'users-update'  // fieldChanged
+                );
+
+                // Update password if provided
+                if (data.password) {
+                    const hashedPassword = await bcrypt.hash(data.password, 10);
+                    await trx('users')
+                        .where('id', userId)
+                        .update({ password: hashedPassword });
+                }
+            });
+
+            return res.status(200).json({ 
+                success: true, 
+                msg: 'Registration completed successfully', 
+                url: '/home' 
+            });
+        }
+    } catch (error) {
+        logger.error("[ERROR] Database Error:", error);
+        return res.status(500).json({ 
+            error: true, 
+            msg: 'An error occurred during registration' 
+        });
+    }
 }
 
 export default finishRegister;

@@ -1,12 +1,11 @@
-import pool from '../../inc/mysql.js';
+import knex from '../../inc/knex.js';
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
-// import sendEmbed from '../../inc/_common.js';
 import { sendVerificationEmail, sendWelcomeEmail } from '../../inc/mail_templates.js';
-import {addaudit} from '../../inc/_common.js';
+import { addaudit } from '../../inc/_common.js';
 
 const config = readConfig();
 
@@ -39,45 +38,67 @@ export async function signup(req, res) {
     }
 
     try {
-        const connection = await pool.getConnection();
+        // Check if email already exists
+        const existingUser = await knex('users')
+            .whereRaw('BINARY mail = ?', [validatedMail])
+            .first();
 
-        const [existingUser] = await connection.query("SELECT * FROM users WHERE BINARY mail = ?", [validatedMail]);
-
-        if (existingUser.length > 0) {
-            connection.release();
+        if (existingUser) {
             return res.status(409).json({ error: true, msg: "Email is already registered." });
         }
 
         const hashedPassword = await bcrypt.hash(validatedPassword, 10);
 
-        const [result] = await connection.query("INSERT INTO users (mail, password) VALUES (?, ?)", [validatedMail, hashedPassword]);
+        // Use transaction for data consistency
+        await knex.transaction(async (trx) => {
+            // Insert new user
+            const [userId] = await trx('users')
+                .insert({
+                    mail: validatedMail,
+                    password: hashedPassword
+                })
+                .returning('id');
+                
+            // Add audit log
+            await addaudit(userId, 1, userId, null, null, null);
 
-        const userID = result.insertId;
+            // Generate verification code
+            const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            let randomCode = '';
+            const length = 6;
+            for (let i = 0; i < length; i++) {
+                randomCode += characters.charAt(Math.floor(Math.random() * characters.length));
+            }
+            const timexp = Math.floor(Date.now() / 1000) + 3600;
+            const action = 1;
 
-        addaudit(connection, userID, 1, userID, null, null, null);
+            // Insert verification code
+            await trx('verify_codes')
+                .insert({
+                    userid: userId,
+                    code: randomCode,
+                    expire: timexp,
+                    action: action
+                });
+                
+            // Send verification and welcome emails
+            await sendVerificationEmail(validatedMail, randomCode, randomCode);
+            
+            const logo = "";
+            await sendWelcomeEmail(mail, userId, logo);
+        });
 
-
-        const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        let randomCode = '';
-        const length = 6;
-        for (let i = 0; i < length; i++) {
-            randomCode += characters.charAt(Math.floor(Math.random() * characters.length));
-        }
-        const timexp = Math.floor(Date.now() / 1000) + 3600;
-        const action = 1;
-
-        await connection.query("INSERT INTO verify_codes (userid, code, expire, action) VALUES (?, ?, ?, ?)", [userID, randomCode, timexp, action]);
-
-        await sendVerificationEmail(validatedMail, randomCode, randomCode);
-
-        const logo = ""
-        await sendWelcomeEmail(mail, userID, logo);
-
-        connection.release();
-        return res.status(200).json({ error: false, msg: "Registration successful. Please check your mail to verify.", url: "/signin" });
+        return res.status(200).json({ 
+            error: false, 
+            msg: "Registration successful. Please check your mail to verify.", 
+            url: "/signin" 
+        });
     } catch (err) {
-        logger.error("[ERROR] MySQL Error: ", err);
-        return res.status(500).json({ error: true, msg: "An error occurred during registration. Please try again later." });
+        logger.error("[ERROR] Database Error: ", err);
+        return res.status(500).json({ 
+            error: true, 
+            msg: "An error occurred during registration. Please try again later." 
+        });
     }
 }
 

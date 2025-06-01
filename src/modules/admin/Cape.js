@@ -3,6 +3,10 @@ import multer from 'multer';
 import fs from 'fs/promises';
 import path from 'path';
 import logger from '../../logger.js';
+import knex from '../../inc/knex.js';
+import readConfig from '../../inc/yamlReader.js';
+
+const config = readConfig();
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -15,15 +19,14 @@ const storage = multer.diskStorage({
     }
 });
 
-async function checkPermission(connection, userId) {
-    const [userPerms] = await connection.query(
-        "SELECT permlvl FROM users WHERE id = ?", 
-        [userId]
-    );
+async function checkPermission(userId) {
+    const user = await knex('users')
+        .where({ id: userId })
+        .first('permlvl');
     
-    if (!userPerms.length) return false;
+    if (!user) return false;
     
-    const permLevel = userPerms[0].permlvl;
+    const permLevel = user.permlvl;
     const permissions = config.permissions[permLevel] || [];
     
     return permissions.includes('admin.capes');
@@ -40,10 +43,10 @@ const upload = multer({
         cb(null, true);
     }
 }).single('cape');
+
 async function uploadCape(req, res) {
-    const connection = await mysql.getConnection();
     try {
-        const hasPermission = await checkPermission(connection, req.userId);
+        const hasPermission = await checkPermission(req.userId);
         if (!hasPermission) {
             return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
         }
@@ -55,35 +58,36 @@ async function uploadCape(req, res) {
             const owners = JSON.parse(req.body.owners || '[]'); // Parse owner array
             const uuid = req.capeUuid;
 
-            // Insert cape
-            await connection.query(
-                "INSERT INTO cloaks_lib (uuid, name) VALUES (?, ?)",
-                [uuid, name]
-            );
+            // Using knex transaction to ensure all operations succeed or fail together
+            await knex.transaction(async (trx) => {
+                // Insert cape
+                await trx('cloaks_lib').insert({
+                    uuid: uuid,
+                    name: name
+                });
 
-            // Insert owners if provided
-            if (owners.length > 0) {
-                const ownerValues = owners.map(uid => [uid, uuid]);
-                await connection.query(
-                    "INSERT INTO cloaks_users (uid, cloak_id) VALUES ?",
-                    [ownerValues]
-                );
-            }
+                // Insert owners if provided
+                if (owners.length > 0) {
+                    const ownerInserts = owners.map(uid => ({
+                        uid: uid,
+                        cloak_id: uuid
+                    }));
+                    
+                    await trx('cloaks_users').insert(ownerInserts);
+                }
+            });
 
             res.json({ error: false, msg: 'Cape uploaded', id: uuid });
         });
     } catch (err) {
         logger.error("[ERROR] Cape upload failed:", err);
         res.status(500).json({ error: true, msg: 'Upload failed' });
-    } finally {
-        connection.release();
     }
 }
 
 async function updateCape(req, res) {
-    const connection = await mysql.getConnection();
     try {
-        const hasPermission = await checkPermission(connection, req.userId);
+        const hasPermission = await checkPermission(req.userId);
         if (!hasPermission) {
             return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
         }
@@ -91,41 +95,37 @@ async function updateCape(req, res) {
         const { id } = req.params;
         const { name } = req.body;
 
-        await connection.query(
-            "UPDATE cloaks_lib SET name = ? WHERE uuid = ?",
-            [name, id]
-        );
+        await knex('cloaks_lib')
+            .where('uuid', id)
+            .update({ name: name });
 
         res.json({ error: false, msg: 'Cape updated' });
     } catch (err) {
         logger.error("[ERROR] Cape update failed:", err);
         res.status(500).json({ error: true, msg: 'Update failed' });
-    } finally {
-        connection.release();
     }
 }
 
 async function deleteCape(req, res) {
-    const connection = await mysql.getConnection();
     try {
-        const hasPermission = await checkPermission(connection, req.userId);
+        const hasPermission = await checkPermission(req.userId);
         if (!hasPermission) {
             return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
         }
 
         const { id } = req.params;
 
-        // Delete owners first (foreign key constraint)
-        await connection.query(
-            "DELETE FROM cloaks_users WHERE cloak_id = ?",
-            [id]
-        );
+        await knex.transaction(async (trx) => {
+            // Delete owners first (foreign key constraint)
+            await trx('cloaks_users')
+                .where('cloak_id', id)
+                .delete();
 
-        // Delete cape record
-        await connection.query(
-            "DELETE FROM cloaks_lib WHERE uuid = ?",
-            [id]
-        );
+            // Delete cape record
+            await trx('cloaks_lib')
+                .where('uuid', id)
+                .delete();
+        });
 
         // Delete file
         await fs.unlink(path.join('uploads/capes', `${id}.png`));
@@ -134,8 +134,6 @@ async function deleteCape(req, res) {
     } catch (err) {
         logger.error("[ERROR] Cape deletion failed:", err);
         res.status(500).json({ error: true, msg: 'Deletion failed' });
-    } finally {
-        connection.release();
     }
 }
 

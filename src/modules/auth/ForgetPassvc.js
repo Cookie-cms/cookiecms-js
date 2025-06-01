@@ -1,4 +1,4 @@
-import mysql from '../../inc/mysql.js';
+import knex from '../../inc/knex.js';
 import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 
@@ -13,7 +13,7 @@ function validate(data) {
 async function resetPassword(req, res) {
     const { mail } = req.body;
 
-    if (config.production = "demo") {
+    if (config.production === "demo") {
         return res.status(403).json({ error: true, msg: "Reset password is disabled in demo mode." });
     }
 
@@ -28,13 +28,12 @@ async function resetPassword(req, res) {
     }
 
     try {
-        const connection = await mysql.getConnection();
-
         // Check if email exists
-        const [user] = await connection.query("SELECT id FROM users WHERE BINARY mail = ?", [validatedMail]);
+        const user = await knex('users')
+            .where(knex.raw('BINARY mail = ?', [validatedMail]))
+            .first('id');
 
-        if (!user.length) {
-            connection.release();
+        if (!user) {
             return res.status(404).json({ error: true, msg: 'Email not found.' });
         }
 
@@ -50,12 +49,16 @@ async function resetPassword(req, res) {
         const action = 4;
 
         // Insert the new verification code
-        await connection.query("INSERT INTO verify_codes (userid, code, expire, action) VALUES (?, ?, ?, ?)", [user[0].id, randomCode, timexp, action]);
+        await knex('verify_codes').insert({
+            userid: user.id,
+            code: randomCode,
+            expire: timexp,
+            action: action
+        });
 
-        connection.release();
-        return res.status(200).json({ error: false, msg: 'Code for resting password sent.' });
+        return res.status(200).json({ error: false, msg: 'Code for resetting password sent.' });
     } catch (err) {
-        logger.error("[ERROR] MySQL Error: ", err);
+        logger.error("[ERROR] Database Error: ", err);
         return res.status(500).json({ error: true, msg: 'An error occurred while generating the verification code. Please try again.' });
     }
 }

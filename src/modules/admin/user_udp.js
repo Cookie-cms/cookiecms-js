@@ -1,27 +1,27 @@
-import mysql from '../../inc/mysql.js';
+import knex from '../../inc/knex.js';
 import readConfig from '../../inc/yamlReader.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
-import {checkPermission} from '../../inc/_common.js';
+import { checkPermission } from '../../inc/_common.js';
+import logger from '../../logger.js';
 
 const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
 
 export async function user_udp(req, res) {
-    const connection = await mysql.getConnection();
     const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
     if (!token) {
         return res.status(401).json({ error: true, msg: 'Invalid JWT', code: 401 });
     }
-    const status = await isJwtExpiredOrBlacklisted(token, connection, JWT_SECRET_KEY);
-
-    if (!status.valid) {
-        connection.release();
-        return res.status(401).json({ error: true, msg: status.message, code: 401 });
-    }
-    try {
     
-        if (!await checkPermission(connection, status.data.sub, 'admin.useredit')) {
-            return res.status(403).json({ error: 'Insufficient permissions' });
+    try {
+        const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
+
+        if (!status.valid) {
+            return res.status(401).json({ error: true, msg: status.message, code: 401 });
+        }
+    
+        if (!await checkPermission(status.data.sub, 'admin.useredit')) {
+            return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
         }
 
         const { id } = req.params;
@@ -29,10 +29,10 @@ export async function user_udp(req, res) {
 
         // Validate id
         if (!id) {
-            return res.status(400).json({ error: 'User id is required' });
+            return res.status(400).json({ error: true, msg: 'User id is required' });
         }
 
-        // Build dynamic update query
+        // Define allowed fields for update
         const allowedFields = [
             'username',
             'mail',
@@ -44,43 +44,36 @@ export async function user_udp(req, res) {
             'mail_verification'
         ];
 
-        const updates = [];
-        const values = [];
-
+        // Filter update data to only include allowed fields
+        const filteredUpdateData = {};
         for (const [key, value] of Object.entries(updateData)) {
             if (allowedFields.includes(key)) {
-                updates.push(`${key} = ?`);
-                values.push(value);
+                filteredUpdateData[key] = value;
             }
         }
 
-        if (updates.length === 0) {
-            return res.status(400).json({ error: 'No valid fields to update' });
+        if (Object.keys(filteredUpdateData).length === 0) {
+            return res.status(400).json({ error: true, msg: 'No valid fields to update' });
         }
 
-        // Add id to values array
-        values.push(id);
+        // Update user with Knex
+        const rowsUpdated = await knex('users')
+            .where({ id: id })
+            .orWhere({ username: id })
+            .update(filteredUpdateData);
 
-        const query = `
-            UPDATE users 
-            SET ${updates.join(', ')} 
-            WHERE id = ? OR username = ?
-        `;
-
-        const [result] = await mysql.execute(query, [...values, id]);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ error: 'User not found' });
+        if (rowsUpdated === 0) {
+            return res.status(404).json({ error: true, msg: 'User not found' });
         }
 
         return res.json({
-            success: true,
-            message: 'User updated successfully'
+            error: false,
+            msg: 'User updated successfully'
         });
 
     } catch (error) {
         logger.error('Error updating user:', error);
-        return res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: true, msg: 'Internal server error' });
     }
 }
 

@@ -1,10 +1,11 @@
 import express from 'express';
 import routes from './routes/index.js';
 import logger from './logger.js';
-import mysql from './inc/mysql.js';
 import sendHtmlEmail from './inc/mail.js';
 import cors from 'cors';
 import createResponse from './inc/_common.js';
+import knex from './inc/knex.js';
+import { getDefaultStatusMessage } from 'http';
 
 export default { createResponse };
 
@@ -14,14 +15,18 @@ app.use(cors({
     origin: 'http://localhost:3000'
 }));
 
-mysql.getConnection((err, connection) => {
-    if (err) {
-        logger.error('Error connecting to MySQL:', err);
-    } else {
-        logger.info('MySQL connection established successfully');
-        connection.release();
+// Test database connection
+async function testDatabaseConnection() {
+    try {
+        await knex.raw('SELECT 1');
+        logger.info('Database connection established successfully');
+    } catch (err) {
+        logger.error('Error connecting to database:', err);
+        process.exit(1);
     }
-});
+}
+
+testDatabaseConnection();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -52,7 +57,10 @@ const shutdown = () => {
     logger.info('Shutting down server...');
     server.close(() => {
         logger.info('Server closed.');
-        process.exit(0);
+        knex.destroy().then(() => {
+            logger.info('Database connection closed.');
+            process.exit(0);
+        });
     });
 };
 

@@ -1,6 +1,7 @@
-import mysql from '../../inc/mysql.js';
+import knex from '../../inc/knex.js';
 import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
+import { sendVerificationEmail } from '../../inc/mail_templates.js';
 
 const config = readConfig(process.env.CONFIG_PATH || '../config.yml');
 
@@ -13,7 +14,7 @@ function validate(data) {
 async function requestVerificationCode(req, res) {
     const { mail } = req.body;
 
-    if (config.production = "demo") {
+    if (config.production === "demo") { // Fixed assignment to comparison
         return res.status(403).json({ error: true, msg: "Verification code request is disabled in demo mode." });
     }
 
@@ -28,18 +29,17 @@ async function requestVerificationCode(req, res) {
     }
 
     try {
-        const connection = await mysql.getConnection();
-
         // Check if email exists
-        const [user] = await connection.query("SELECT id FROM users WHERE BINARY mail = ?", [validatedMail]);
+        const user = await knex('users')
+            .whereRaw('BINARY mail = ?', [validatedMail])
+            .select('id', 'mail_verify')
+            .first();
 
-        if (!user.length) {
-            connection.release();
+        if (!user) {
             return res.status(404).json({ error: true, msg: 'Email not found.' });
         }
 
-        if (user[0].mail_verify === 1) {
-            connection.release();
+        if (user.mail_verify === 1) {
             return res.status(403).json({ error: true, msg: 'Your mail already verified.' });
         }
 
@@ -51,19 +51,23 @@ async function requestVerificationCode(req, res) {
             randomCode += characters.charAt(Math.floor(Math.random() * characters.length));
         }
 
-        await sendVerificationEmail(validatedMail, userID, randomCode, randomCode);
-
-
         const timexp = Math.floor(Date.now() / 1000) + 3600; // Expires in 1 hour
         const action = 1;
 
         // Insert the new verification code
-        await connection.query("INSERT INTO verify_codes (userid, code, expire, action) VALUES (?, ?, ?, ?)", [user[0].id, randomCode, timexp, action]);
+        await knex('verify_codes')
+            .insert({
+                userid: user.id,
+                code: randomCode,
+                expire: timexp,
+                action: action
+            });
 
-        connection.release();
+        await sendVerificationEmail(validatedMail, user.id, randomCode, randomCode);
+
         return res.status(200).json({ error: false, msg: 'New verification code generated successfully.' });
     } catch (err) {
-        logger.error("[ERROR] MySQL Error: ", err);
+        logger.error("[ERROR] Database Error: ", err);
         return res.status(500).json({ error: true, msg: 'An error occurred while generating the verification code. Please try again.' });
     }
 }

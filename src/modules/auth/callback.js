@@ -1,10 +1,9 @@
 import oauth from '@cookie-cms/oauth2-discord';
 import jwt from 'jsonwebtoken';
-import mysql from '../../inc/mysql.js';
+import knex from '../../inc/knex.js';
 import logger from '../../logger.js';
-import { createResponse } from '../../inc/_common.js';
+import { createResponse, addaudit } from '../../inc/_common.js';
 import readConfig from '../../inc/yamlReader.js';
-import { addaudit } from '../../inc/_common.js';
 
 const config = readConfig();
 
@@ -21,13 +20,12 @@ function generateToken(userId) {
     );
 }
 
-async function linkDiscordToUser(userResponse, userId, connection) {
-    await connection.query(
-        "UPDATE users SET dsid = ? WHERE id = ?",
-        [userResponse.id, userId]
-    );
+async function linkDiscordToUser(userResponse, userId) {
+    await knex('users')
+        .where('id', userId)
+        .update({ dsid: userResponse.id });
 
-    await addaudit(connection, userId, 9, userId, null, userResponse.id, 'dsid');
+    await addaudit(userId, 9, userId, null, userResponse.id, 'dsid');
 
     return { success: true, message: "Successfully connected Discord account" };
 }
@@ -36,8 +34,6 @@ async function registerUser(userResponse, req, res) {
     const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
 
     try {
-        const connection = await mysql.getConnection();
-
         let userIdFromToken = null;
         if (token) {
             try {
@@ -48,32 +44,33 @@ async function registerUser(userResponse, req, res) {
             }
         }
 
-        const [[existingUser]] = await connection.query(
-            "SELECT id FROM users WHERE dsid = ?",
-            [userResponse.id]
-        );
+        const existingUser = await knex('users')
+            .where('dsid', userResponse.id)
+            .first('id');
 
         const randomCode = Math.floor(Math.random() * 99) + 1;
         const timexp = Math.floor(Date.now() / 1000) + 3600;
 
-        await connection.query(
-            `INSERT INTO discord (avatar_cache, name_gb, conn_id, expire, mail, userid)
-             VALUES (?, ?, ?, ?, ?, ?) 
-             ON DUPLICATE KEY UPDATE avatar_cache = VALUES(avatar_cache), name_gb = VALUES(name_gb), 
-             conn_id = VALUES(conn_id), expire = VALUES(expire), mail = VALUES(mail)`,
-            [
-                userResponse.avatar,
-                userResponse.username,
-                randomCode,
-                timexp,
-                userResponse.email || null,
-                userResponse.id,
-            ]
-        );
+        await knex('discord')
+            .insert({
+                avatar_cache: userResponse.avatar,
+                name_gb: userResponse.username,
+                conn_id: randomCode,
+                expire: timexp,
+                mail: userResponse.email || null,
+                userid: userResponse.id
+            })
+            .onConflict('userid')
+            .merge({
+                avatar_cache: userResponse.avatar,
+                name_gb: userResponse.username,
+                conn_id: randomCode,
+                expire: timexp,
+                mail: userResponse.email || null
+            });
 
         if (userIdFromToken) {
-            await linkDiscordToUser(userResponse, userIdFromToken, connection);
-            connection.release();
+            await linkDiscordToUser(userResponse, userIdFromToken);
             return res.status(200).json(createResponse(false, 'Successfully connected Discord', "/home"));
         }
 
@@ -85,11 +82,9 @@ async function registerUser(userResponse, req, res) {
                 avatar: userResponse.avatar,
                 conn_id: randomCode,
             };
-            connection.release();
             return res.status(200).json(createResponse(false, 'Successfully logged in', "/home", userData));
         }
 
-        connection.release();
         return res.status(404).json(createResponse(true, 'User not found, do you want to create or link?', "/home", {
             userid: userResponse.id,
             username: userResponse.username,

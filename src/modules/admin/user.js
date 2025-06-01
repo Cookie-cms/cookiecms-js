@@ -1,31 +1,27 @@
-import mysql from '../../inc/mysql.js';
+import knex from '../../inc/knex.js';
 import readConfig from '../../inc/yamlReader.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import Mail from 'nodemailer/lib/mailer/index.js';
-import {checkPermission} from '../../inc/_common.js';
+import { checkPermission, addaudit } from '../../inc/_common.js';
 import logger from '../../logger.js';
 
 const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
 
-
-
 async function getUserSkins(req, res) {
-    const connection = await mysql.getConnection();
     try {
         // Check permissions
-        const hasPermission = await checkPermission(connection, req.userId, 'admin.userskins');
+        const hasPermission = await checkPermission(req.userId, 'admin.userskins');
         if (!hasPermission) {
             return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
         }
 
         const { ownerid } = req.params;
 
-        // Get skins for user
-        const [skins] = await connection.query(
-            "SELECT uuid, name FROM skins_library WHERE ownerid = ?",
-            [ownerid]
-        );
+        // Get skins for user using Knex
+        const skins = await knex('skins_library')
+            .select('uuid', 'name')
+            .where('ownerid', ownerid);
 
         res.json({
             error: false,
@@ -35,33 +31,18 @@ async function getUserSkins(req, res) {
     } catch (err) {
         logger.error("[ERROR] Failed to get user skins:", err);
         res.status(500).json({ error: true, msg: 'Failed to get skins' });
-    } finally {
-        connection.release();
     }
 }
 
-
-async function getUserSkins_s(connection, userId) {
-    const [skins] = await connection.query(`
-        SELECT skins_library.uuid, skins_library.name, IFNULL(skins_library.cloak_id, 0) AS cloak_id
-        FROM skins_library
-        WHERE skins_library.ownerid = ?
-    `, [userId]);
-    return skins;
+async function getUserSkins_s(userId) {
+    return await knex('skins_library')
+        .select('skins_library.uuid', 'skins_library.name')
+        .select(knex.raw('IFNULL(skins_library.cloak_id, 0) AS cloak_id'))
+        .where('skins_library.ownerid', userId);
 }
-
-// async function getUserSkins(connection, userId) {
-//     const [skins] = await connection.query(`
-//         SELECT skins_library.uuid, skins_library.name, IFNULL(skins_library.cloak_id, 0) AS cloak_id
-//         FROM skins_library
-//         WHERE skins_library.ownerid = ?
-//     `, [userId]);
-//     return skins;
-// }
 
 export async function user(req, res) {
     const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
-
     const { id } = req.params;
 
     if (!token) {
@@ -69,46 +50,37 @@ export async function user(req, res) {
     }
 
     try {
-        const connection = await mysql.getConnection();
-        const status = await isJwtExpiredOrBlacklisted(token, connection, JWT_SECRET_KEY);
+        const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
 
         if (!status.valid) {
-            connection.release();
             return res.status(401).json({ error: true, msg: status.message, code: 401 });
         }
         const userId = status.data.sub;
 
-        const hasPermission = await checkPermission(connection, userId, 'admin.user');
+        const hasPermission = await checkPermission(userId, 'admin.user');
         if (!hasPermission) {
             return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
         }
-    
 
         logger.info(userId);
-        const [user] = await connection.query("SELECT * FROM users WHERE id = ?", [id]);
+        const user = await knex('users').where('id', id).first();
 
-        if (!user.length) {
-            connection.release();
+        if (!user) {
             return res.status(404).json({ error: true, msg: 'User not found', code: 404 });
         }
 
-
-
-        const [selectedSkin] = await connection.query(`
-            SELECT skin_user.skin_id, skins_library.name AS skin_name, skins_library.cloak_id
-            FROM skin_user
-            JOIN skins_library ON skin_user.skin_id = skins_library.uuid
-            WHERE skin_user.uid = ?
-        `, [id]);
+        const selectedSkin = await knex('skin_user')
+            .join('skins_library', 'skin_user.skin_id', '=', 'skins_library.uuid')
+            .select('skin_user.skin_id', 'skins_library.name as skin_name', 'skins_library.cloak_id')
+            .where('skin_user.uid', id)
+            .first();
 
         logger.info(selectedSkin);
 
-        const [capes] = await connection.query(`
-            SELECT cloaks_lib.uuid AS id, cloaks_lib.name
-            FROM cloaks_users
-            JOIN cloaks_lib ON cloaks_users.cloak_id = cloaks_lib.uuid
-            WHERE cloaks_users.uid = ?
-        `, [id]);
+        const capes = await knex('cloaks_users')
+            .join('cloaks_lib', 'cloaks_users.cloak_id', '=', 'cloaks_lib.uuid')
+            .select('cloaks_lib.uuid as id', 'cloaks_lib.name')
+            .where('cloaks_users.uid', id);
 
         const capeList = capes.length > 0 ? capes.map(cape => ({
             Id: cape.id,
@@ -117,23 +89,26 @@ export async function user(req, res) {
 
         let selectedCape = null;
         
-        const skinList = await getUserSkins_s(connection, id);
+        const skinList = await getUserSkins_s(id);
 
+        if (selectedSkin && selectedSkin.cloak_id) {
+            const cape = await knex('cloaks_lib')
+                .select('uuid as id', 'name')
+                .where('uuid', selectedSkin.cloak_id)
+                .first();
 
-        if (selectedSkin.length > 0 && selectedSkin[0].cloak_id) {
-            const [cape] = await connection.query(`
-                SELECT uuid AS id, name FROM cloaks_lib WHERE uuid = ?;
-            `, [selectedSkin[0].cloak_id]);
-
-            if (cape.length > 0) {
+            if (cape) {
                 selectedCape = {
-                    Id: cape[0].id,
-                    Name: cape[0].name
+                    Id: cape.id,
+                    Name: cape.name
                 };
             }
         }
 
-        const [discordid] = await connection.query("SELECT dsid FROM users WHERE id = ?", [userId]);
+        const discordid = await knex('users')
+            .select('dsid')
+            .where('id', userId)
+            .first();
 
         let discordIntegration = false;
         let discordData = {
@@ -142,54 +117,52 @@ export async function user(req, res) {
             avatar: ""
         };
 
-        if (discordid.length > 0) {
-            const [discordInfo] = await connection.query("SELECT * FROM discord WHERE userid = ?", [discordid[0].dsid]);
+        if (discordid && discordid.dsid) {
+            const discordInfo = await knex('discord')
+                .where('userid', discordid.dsid)
+                .first();
 
-            if (discordInfo.length > 0) {
+            if (discordInfo) {
                 discordIntegration = true;
                 discordData = {
-                    userid: discordInfo[0].userid,
-                    username: discordInfo[0].name_gb,
-                    avatar: discordInfo[0].avatar_cache
+                    userid: discordInfo.userid,
+                    username: discordInfo.name_gb,
+                    avatar: discordInfo.avatar_cache
                 };
             }
         }
-
-
-        connection.release();
 
         const userdata = {
             error: false,
             msg: "User data fetched successfully",
             url: null,
             data: {
-                Username: user[0].username,
-                Uuid: user[0].uuid,
-                Mail: user[0].mail,
-                Mail_verify: user[0].mail_verify,
+                Username: user.username,
+                Uuid: user.uuid,
+                Mail: user.mail,
+                Mail_verify: user.mail_verify,
                 Selected_Cape: selectedCape ? selectedCape.Id : 0,
-                Selected_Skin: selectedSkin.length > 0 ? selectedSkin[0].skin_id : 0,
-                PermLvl: user[0].perms,
+                Selected_Skin: selectedSkin ? selectedSkin.skin_id : 0,
+                PermLvl: user.perms,
                 Capes: capeList,
                 Skins: skinList,
                 Discord_integration: discordIntegration,
                 Discord: discordData,
-                Mail_verification: user[0].mail_verify === 1
+                Mail_verification: user.mail_verify === 1
             }
         };
 
         res.status(200).json(userdata);
     } catch (error) {
         logger.error('Error:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
+        res.status(500).json({ error: true, msg: 'Internal Server Error' });
     }
 }
 
 export async function userupdate(req, res) {
-    const connection = await pool.getConnection();
     try {
         // Check permissions
-        const hasPermission = await checkPermission(connection, req.userId, 'admin.useredit');
+        const hasPermission = await checkPermission(req.userId, 'admin.useredit');
         if (!hasPermission) {
             return res.status(403).json({ 
                 error: true, 
@@ -201,49 +174,51 @@ export async function userupdate(req, res) {
         const { username, uuid, mail, mail_verify } = req.body;
 
         // Get current user data for audit
-        const [currentUser] = await connection.query(
-            "SELECT username, uuid, mail, mail_verify FROM users WHERE id = ?",
-            [id]
-        );
+        const currentUser = await knex('users')
+            .select('username', 'uuid', 'mail', 'mail_verify')
+            .where('id', id)
+            .first();
 
-        if (!currentUser.length) {
+        if (!currentUser) {
             return res.status(404).json({ 
                 error: true, 
                 msg: 'User not found' 
             });
         }
 
-        // Update user
-        await connection.query(
-            `UPDATE users 
-             SET username = ?, 
-                 uuid = ?, 
-                 mail = ?, 
-                 mail_verify = ? 
-             WHERE id = ?`,
-            [username, uuid, mail, mail_verify, id]
-        );
+        // Update user using Knex transaction
+        await knex.transaction(async trx => {
+            // Update user
+            await trx('users')
+                .where('id', id)
+                .update({
+                    username,
+                    uuid,
+                    mail,
+                    mail_verify
+                });
 
-        // Add audit entries for changed fields
-        if (username !== currentUser[0].username) {
-            await addaudit(connection, req.userId, 11, id, 
-                currentUser[0].username, username, 'username');
-        }
+            // Add audit entries for changed fields
+            if (username !== currentUser.username) {
+                await addaudit(req.userId, 11, id, 
+                    currentUser.username, username, 'username');
+            }
 
-        if (uuid !== currentUser[0].uuid) {
-            await addaudit(connection, req.userId, 11, id, 
-                currentUser[0].uuid, uuid, 'uuid');
-        }
+            if (uuid !== currentUser.uuid) {
+                await addaudit(req.userId, 11, id, 
+                    currentUser.uuid, uuid, 'uuid');
+            }
 
-        if (mail !== currentUser[0].mail) {
-            await addaudit(connection, req.userId, 11, id, 
-                currentUser[0].mail, mail, 'mail');
-        }
+            if (mail !== currentUser.mail) {
+                await addaudit(req.userId, 11, id, 
+                    currentUser.mail, mail, 'mail');
+            }
 
-        if (mail_verify !== currentUser[0].mail_verify) {
-            await addaudit(connection, req.userId, 11, id, 
-                currentUser[0].mail_verify, mail_verify, 'mail_verify');
-        }
+            if (mail_verify !== currentUser.mail_verify) {
+                await addaudit(req.userId, 11, id, 
+                    currentUser.mail_verify, mail_verify, 'mail_verify');
+            }
+        });
 
         return res.json({
             error: false,
@@ -256,29 +231,27 @@ export async function userupdate(req, res) {
             error: true, 
             msg: 'Failed to update user' 
         });
-    } finally {
-        connection.release();
     }
 }
 
 export async function addcape(req, res) {
-    const connection = await mysql.getConnection();
     try {
         // Check permissions
-        const hasPermission = await checkPermission(connection, req.userId, 'admin.users');
+        const hasPermission = await checkPermission(req.userId, 'admin.users');
         if (!hasPermission) {
             return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
         }
 
         const { user, cape } = req.body;
 
-        // Insert new capes if provided
+        // Insert new capes if provided using Knex
         if (cape && cape.length > 0) {
-            const capeValues = cape.map(capeId => [user, capeId]);
-            await connection.query(
-                "INSERT INTO cloaks_users (uid, cloak_id) VALUES ?",
-                [capeValues]
-            );
+            const capeValues = cape.map(capeId => ({
+                uid: user,
+                cloak_id: capeId
+            }));
+            
+            await knex('cloaks_users').insert(capeValues);
         }
 
         res.json({ 
@@ -292,28 +265,25 @@ export async function addcape(req, res) {
             error: true, 
             msg: 'Failed to update capes' 
         });
-    } finally {
-        connection.release();
     }
 }
 
 export async function RemoveCape(req, res) {
-    const connection = await mysql.getConnection();
     try {
         // Check permissions
-        const hasPermission = await checkPermission(connection, req.userId, 'admin.users');
+        const hasPermission = await checkPermission(req.userId, 'admin.users');
         if (!hasPermission) {
             return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
         }
 
         const { user, cape } = req.body;
 
-        // Remove capes if provided
+        // Remove capes if provided using Knex
         if (cape && cape.length > 0) {
-            await connection.query(
-                "DELETE FROM cloaks_users WHERE uid = ? AND cloak_id IN (?)",
-                [user, cape]
-            );
+            await knex('cloaks_users')
+                .where('uid', user)
+                .whereIn('cloak_id', cape)
+                .delete();
         }
 
         res.json({ 
@@ -329,3 +299,5 @@ export async function RemoveCape(req, res) {
         });
     }
 }
+
+export { getUserSkins };

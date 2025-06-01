@@ -1,6 +1,7 @@
 import path from 'path';
 import fs from 'fs';
-import mysql from '../../inc/mysql.js';
+import knex from '../../inc/knex.js';
+import logger from '../../logger.js';
 
 async function sendFile(res, filePath) {
     try {
@@ -16,37 +17,29 @@ async function sendFile(res, filePath) {
 }
 
 export async function getSkinFile(req, res) {
-    let connection;
     try {
-        connection = await mysql.getConnection();
-        
-        const [skin] = await connection.execute(`
-            SELECT 
-                sl.uuid,
-                sl.slim,
-                NULLIF(sl.cloak_id, '0') as cloak_id
-            FROM users u
-            JOIN skin_user su ON u.id = su.uid
-            JOIN skins_library sl ON su.skin_id = sl.uuid
-            WHERE u.uuid = ?
-        `, [req.params.uuid]);
+        const skin = await knex('users as u')
+            .join('skin_user as su', 'u.id', '=', 'su.uid')
+            .join('skins_library as sl', 'su.skin_id', '=', 'sl.uuid')
+            .where('u.uuid', req.params.uuid)
+            .select(
+                'sl.uuid',
+                'sl.slim',
+                knex.raw('NULLIF(sl.cloak_id, \'0\') as cloak_id')
+            )
+            .first();
 
-        if (!skin.length || !skin[0].uuid) {
+        if (!skin || !skin.uuid) {
             return res.status(404).send('Skin not found');
         }
 
-        const filePath = path.join('uploads/skins/', `${skin[0].uuid}.png`);
+        const filePath = path.join('uploads/skins/', `${skin.uuid}.png`);
         return sendFile(res, filePath);
 
     } catch (error) {
         logger.error('Error getting skin:', error);
         res.status(500).send('Internal server error');
-    } finally {
-        if (connection) {
-            connection.release();
-        }
     }
 }
 
 export default getSkinFile;
-

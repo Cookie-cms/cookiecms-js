@@ -1,4 +1,4 @@
-import mysql from '../../inc/mysql.js';
+import knex from '../../inc/knex.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
@@ -6,13 +6,11 @@ import logger from '../../logger.js';
 const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
 
-async function getUserSkins(connection, userId) {
-    const [skins] = await connection.query(`
-        SELECT skins_library.uuid, skins_library.name, IFNULL(skins_library.cloak_id, 0) AS cloak_id
-        FROM skins_library
-        WHERE skins_library.ownerid = ?
-    `, [userId]);
-    return skins;
+async function getUserSkins(userId) {
+    return await knex('skins_library')
+        .select('skins_library.uuid', 'skins_library.name')
+        .select(knex.raw('IFNULL(skins_library.cloak_id, 0) AS cloak_id'))
+        .where('skins_library.ownerid', userId);
 }
 
 async function home(req, res) {
@@ -23,49 +21,43 @@ async function home(req, res) {
     }
 
     try {
-        const connection = await mysql.getConnection();
-        const status = await isJwtExpiredOrBlacklisted(token, connection, JWT_SECRET_KEY);
+        const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
 
         if (!status.valid) {
-            connection.release();
             return res.status(401).json({ error: true, msg: status.message, code: 401 });
         }
 
         const userId = status.data.sub;
         logger.info(userId);
-        const [user] = await connection.query("SELECT * FROM users WHERE id = ?", [userId]);
+        const user = await knex('users')
+            .where({ id: userId })
+            .first();
 
-        if (!user.length) {
-            connection.release();
+        if (!user) {
             return res.status(404).json({ error: true, msg: 'User not found', code: 404 });
         }
 
-        if (!user[0].username || !user[0].uuid || !user[0].password) {
-            connection.release();
+        if (!user.username || !user.uuid || !user.password) {
             logger.info(user);
             const response = {
-                username_create: !user[0].username,
-                password_create: !user[0].password
+                username_create: !user.username,
+                password_create: !user.password
             };
             return res.status(401).json({ error: true, msg: 'Your account is not finished', code: 401, url: '/login', data: response });
         }
 
-
-        const [selectedSkin] = await connection.query(`
-            SELECT skin_user.skin_id, skins_library.name AS skin_name, skins_library.cloak_id
-            FROM skin_user
-            JOIN skins_library ON skin_user.skin_id = skins_library.uuid
-            WHERE skin_user.uid = ?
-        `, [userId]);
+        const selectedSkin = await knex('skin_user')
+            .join('skins_library', 'skin_user.skin_id', '=', 'skins_library.uuid')
+            .select('skin_user.skin_id', 'skins_library.name as skin_name', 'skins_library.cloak_id')
+            .where('skin_user.uid', userId)
+            .first();
 
         logger.info(selectedSkin);
 
-        const [capes] = await connection.query(`
-            SELECT cloaks_lib.uuid AS id, cloaks_lib.name
-            FROM cloaks_users
-            JOIN cloaks_lib ON cloaks_users.cloak_id = cloaks_lib.uuid
-            WHERE cloaks_users.uid = ?
-        `, [userId]);
+        const capes = await knex('cloaks_users')
+            .join('cloaks_lib', 'cloaks_users.cloak_id', '=', 'cloaks_lib.uuid')
+            .select('cloaks_lib.uuid as id', 'cloaks_lib.name')
+            .where('cloaks_users.uid', userId);
 
         const capeList = capes.length > 0 ? capes.map(cape => ({
             Id: cape.id,
@@ -74,23 +66,26 @@ async function home(req, res) {
 
         let selectedCape = null;
         
-        const skinList = await getUserSkins(connection, status.data.sub);
+        const skinList = await getUserSkins(status.data.sub);
 
+        if (selectedSkin && selectedSkin.cloak_id) {
+            const cape = await knex('cloaks_lib')
+                .select('uuid as id', 'name')
+                .where('uuid', selectedSkin.cloak_id)
+                .first();
 
-        if (selectedSkin.length > 0 && selectedSkin[0].cloak_id) {
-            const [cape] = await connection.query(`
-                SELECT uuid AS id, name FROM cloaks_lib WHERE uuid = ?;
-            `, [selectedSkin[0].cloak_id]);
-
-            if (cape.length > 0) {
+            if (cape) {
                 selectedCape = {
-                    Id: cape[0].id,
-                    Name: cape[0].name
+                    Id: cape.id,
+                    Name: cape.name
                 };
             }
         }
 
-        const [discordid] = await connection.query("SELECT dsid FROM users WHERE id = ?", [userId]);
+        const discordid = await knex('users')
+            .select('dsid')
+            .where('id', userId)
+            .first();
 
         let discordIntegration = false;
         let discordData = {
@@ -99,43 +94,43 @@ async function home(req, res) {
             avatar: ""
         };
 
-        if (discordid.length > 0) {
-            const [discordInfo] = await connection.query("SELECT * FROM discord WHERE userid = ?", [discordid[0].dsid]);
+        if (discordid && discordid.dsid) {
+            const discordInfo = await knex('discord')
+                .where('userid', discordid.dsid)
+                .first();
 
-            if (discordInfo.length > 0) {
+            if (discordInfo) {
                 discordIntegration = true;
                 discordData = {
-                    userid: discordInfo[0].userid,
-                    username: discordInfo[0].name_gb,
-                    avatar: discordInfo[0].avatar_cache
+                    userid: discordInfo.userid,
+                    username: discordInfo.name_gb,
+                    avatar: discordInfo.avatar_cache
                 };
             }
         }
-
-        connection.release();
 
         const userdata = {
             error: false,
             msg: "Home data fetched successfully",
             url: null,
             data: {
-                Username: user[0].username,
-                Uuid: user[0].uuid,
+                Username: user.username,
+                Uuid: user.uuid,
                 Selected_Cape: selectedCape ? selectedCape.Id : 0,
-                Selected_Skin: selectedSkin.length > 0 ? selectedSkin[0].skin_id : 0,
-                PermLvl: user[0].perms,
+                Selected_Skin: selectedSkin ? selectedSkin.skin_id : 0,
+                PermLvl: user.perms,
                 Capes: capeList,
                 Skins: skinList,
                 Discord_integration: discordIntegration,
                 Discord: discordData,
-                Mail_verification: user[0].mail_verify === 1
+                Mail_verification: user.mail_verify === 1
             }
         };
 
         res.status(200).json(userdata);
     } catch (error) {
         logger.error('Error:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
+        res.status(500).json({ error: true, msg: 'Internal Server Error' });
     }
 }
 

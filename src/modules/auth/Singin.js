@@ -1,17 +1,13 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import mysql from '../../inc/mysql.js';
+import knex from '../../inc/knex.js';
 import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 import { generateJwtToken } from '../../inc/jwtHelper.js';
 import { addaudit } from '../../inc/_common.js';
 
-
 const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
-
-// logger.info('SEC', JWT_SECRET_KEY);
-
 
 function validate(data) {
     data = data.trim();
@@ -34,79 +30,71 @@ async function login(req, res) {
     const validatedPassword = validate(password);
 
     try {
-        const connection = await mysql.getConnection();
-
+        // Find user by email or username
         let query;
-        let params;
         if (isEmail(validatedUsername)) {
-            query = "SELECT * FROM users WHERE BINARY mail = ?";
-            params = [validatedUsername];
+            query = knex('users')
+                .whereRaw('BINARY mail = ?', [validatedUsername]);
         } else {
-            query = "SELECT * FROM users WHERE BINARY username = ?";
-            params = [validatedUsername];
+            query = knex('users')
+                .whereRaw('BINARY username = ?', [validatedUsername]);
         }
 
-        const [user] = await connection.query(query, params);
+        const user = await query.first();
 
-        if (!user.length) {
-            connection.release();
+        if (!user) {
             return res.status(403).json({ error: true, msg: 'Incorrect username or password' });
         }
 
-        if (user[0].mail_verify === 0) {
-            connection.release();
+        if (user.mail_verify === 0) {
             return res.status(403).json({ error: true, msg: 'Please verify your mail' });
         }
 
-        const passwordMatch = await bcrypt.compare(validatedPassword, user[0].password);
+        const passwordMatch = await bcrypt.compare(validatedPassword, user.password);
 
-        
         if (passwordMatch) {
             if (meta) {
-
                 if (!meta.id || !meta.conn_id) {
                     return res.status(400).json({ error: true, msg: 'id or conn_id not provided' });
                 }
 
-                    // Step 1: Verify if this game account is not already connected to another Discord account
-                const query = "SELECT dsid FROM users WHERE id = ?";
-                const [discord] = await connection.query(query, [user[0].id]);
+                // Verify if this game account is not already connected to another Discord account
+                const discordCheck = await knex('users')
+                    .select('dsid')
+                    .where('id', user.id)
+                    .first();
 
-                if (discord.length > 0 && discord[0].dsid && discord[0].dsid !== meta.id) {
-                    logger.info('Discord:', discord[0].dsid, 'Meta:', meta.id);
-                    connection.release();
+                if (discordCheck && discordCheck.dsid && discordCheck.dsid !== meta.id) {
+                    logger.info('Discord:', discordCheck.dsid, 'Meta:', meta.id);
                     return res.status(403).json({ error: true, msg: 'This game account is already linked to another Discord account' });
                 }
-    
 
-                // Step 2: Check if the conn_id matches
-                const [discord_link] = await connection.query("SELECT * FROM discord WHERE userid = ?", [meta.id]);
-                if (discord_link.length === 0 || discord_link[0].conn_id !== meta.conn_id) {
-                    logger.info('Discord:', discord_link[0].conn_id, 'Meta:', conn_id, 'Discord:', discord_link);
-                    connection.release();
+                // Check if the conn_id matches
+                const discordLink = await knex('discord')
+                    .where('userid', meta.id)
+                    .first();
+
+                if (!discordLink || discordLink.conn_id !== meta.conn_id) {
+                    logger.info('Discord:', discordLink?.conn_id, 'Meta:', meta.conn_id, 'Discord:', discordLink);
                     return res.status(404).json({ error: true, msg: 'Account cannot be connected' });
                 }
 
-                addaudit(connection, user[0].id, 12, user[0].id, null, meta.id, 'dsid');
-                
-                // Step 3: Update the MySQL database
-                await connection.query("UPDATE users SET dsid = ? WHERE id = ?", [meta.id, user[0].id]);
-
+                // Use transaction for data consistency
+                await knex.transaction(async (trx) => {
+                    // Add audit log
+                    await addaudit(user.id, 12, user.id, null, meta.id, 'dsid');
+                    
+                    // Update user's Discord connection
+                    await trx('users')
+                        .where('id', user.id)
+                        .update({ dsid: meta.id });
+                });
             }
     
-            const payload = {
-                iss: config.NameSite,
-                sub: user[0].id,
-                iat: Math.floor(Date.now() / 1000),
-                exp: Math.floor(Date.now() / 1000) + 3600,
-            };
-            logger.info('Payload:', );
-
             try {
-                const userId = user[0].id;
+                const userId = user.id;
                 const token = generateJwtToken(userId, JWT_SECRET_KEY);
 
-                connection.release();
                 return res.status(200).json({
                     error: false,
                     msg: 'Login successful',
@@ -115,15 +103,13 @@ async function login(req, res) {
                 });
             } catch (err) {
                 logger.error("[ERROR] JWT Error: ", err);
-                connection.release();
                 return res.status(500).json({ error: true, msg: 'JWT Error' });
             }
         } else {
-            connection.release();
             return res.status(400).json({ error: true, msg: 'Incorrect username or password' });
         }
     } catch (err) {
-        logger.error("[ERROR] MySQL Error: ", err);
+        logger.error("[ERROR] Database Error: ", err);
         return res.status(500).json({ error: true, msg: 'Database Error' });
     }
 }

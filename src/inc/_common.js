@@ -1,10 +1,9 @@
 import axios from 'axios';
+import knex from './knex.js';
 import readConfig from './yamlReader.js';
 import logger from '../logger.js';
 
 const config = readConfig();
-
-
 
 export function createResponse(error = false, msg = '', url = null, data = {}) {
     return {
@@ -15,31 +14,32 @@ export function createResponse(error = false, msg = '', url = null, data = {}) {
     };
 }
 
-export async function addaudit(connection, iss, action, forId, oldValue = null, newValue = null, fieldChanged = null, time = null) {
+export async function addaudit(iss, action, forId, oldValue = null, newValue = null, fieldChanged = null, time = null) {
     try {
         // Set current time if not provided
         if (!time) {
             time = Math.floor(Date.now() / 1000);
         }
 
-        // SQL query for audit info
-        const query = `
-            INSERT INTO audit_log (iss, action, target_id, old_value, new_value, field_changed, time)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        `;
+        // Insert audit log entry
+        await knex('audit_log').insert({
+            iss: iss,
+            action: action,
+            target_id: forId,
+            old_value: oldValue,
+            new_value: newValue,
+            field_changed: fieldChanged,
+            time: time
+        });
 
-        const values = [iss, action, forId, oldValue, newValue, fieldChanged, time];
-
-        // Execute query without .promise()
-        const [results] = await connection.query(query, values);
-        logger.info('Audit entry added successfully:', results);
+        logger.info('Audit entry added successfully');
 
         // Send audit webhook if enabled
         if (config.AuditSecret?.enabled) {
             
             let description;
             
-            switch (actionId) {
+            switch (action) {
                 case 1:
                     description = `New user registered\nUser ID: ${forId}`;
                     break;
@@ -100,18 +100,17 @@ export async function addaudit(connection, iss, action, forId, oldValue = null, 
     }
 }
 
-
-export async function checkPermission(connection, userId, permission) {
+export async function checkPermission(userId, permission) {
     if (!userId || !permission) return false;
     
-    const [userPerms] = await connection.query(
-        "SELECT perms FROM users WHERE id = ?", 
-        [userId]
-    );
+    const userPerms = await knex('users')
+        .where({ id: userId })
+        .select('perms')
+        .first();
 
-    if (!userPerms.length) return false;
+    if (!userPerms) return false;
 
-    const permLevel = userPerms[0].perms;
+    const permLevel = userPerms.perms;
     let allPermissions = [];
 
     // Combine all permissions from lower levels up to user's level
@@ -120,60 +119,66 @@ export async function checkPermission(connection, userId, permission) {
         allPermissions = [...allPermissions, ...levelPermissions];
     }
 
-
     return allPermissions.includes(permission);
 }
 
-export async function addNewTask(connection, userId, task, value, time, removeold = false) {
+export async function addNewTask(task, userId, value, time, removeold = false) {
     try {
-        if (removeold === true) {
-            const query = `DELETE FROM cron_tasks WHERE userId = ?`;
-            await connection.execute(query, [userId]);
-        }
-        const runAt = new Date(time * 1000); // Преобразуем UNIX-время в дату
-        const query = `INSERT INTO cron_tasks (run_at, type, target, update_value) VALUES (?, ?, ?, ?)`;
+        // Use transaction to ensure data consistency
+        await knex.transaction(async (trx) => {
+            if (removeold === true) {
+                await trx('cron_tasks')
+                    .where({ userId: userId })
+                    .delete();
+            }
+            
+            const runAt = new Date(time * 1000); // Convert UNIX time to date
+            
+            await trx('cron_tasks').insert({
+                run_at: runAt,
+                type: task,
+                target: userId,
+                update_value: value
+            });
+        });
         
-        const [result] = await connection.execute(query, [runAt, task, userId, value]);
-        
-        return { success: true, taskId: result.insertId };
+        return { success: true };
     } catch (error) {
-        logger.error("Ошибка при добавлении задачи в cron_tasks:", error);
+        logger.error("Error adding task to cron_tasks:", error);
         return { success: false, error: error.message };
     }
 }
 
-// function sendEmbed(mail) {
-//     const time = new Date().toLocaleString();
-//     if (config.AuditSecret.enabled) {
-//         // Prepare the payload
-//        const time = new Date().toLocaleString();
-//        const embed = {
-//        "title": "New User Registered",
-//        description: `mail ${mail}\ntime ${time}`, // Use template literals to insert values
-//        "color": 11624960,
-//        "footer": {
-//            "text": "Cookiecms",
-//            "icon_url": "https://avatars.githubusercontent.com/u/152858724?s=200&v=4"
-//        }
-//        };
-//        const data = {
-//            embeds: [embed]
-//        };
-//        const spamming = config.AuditSecret.spamming;
-//        logger.info(`Spamming: ${spamming}`);    
-//        const auditUrl = `${config.AuditSecret.url}?thread_id=${spamming}`;
-
-//        axios.post(auditUrl, data)
-//    } else {
-//          logger.info("Audit not enabled");
-//     }
-// }
-
+export async function sendEmbed(mail) {
+    const time = new Date().toLocaleString();
+    if (config.AuditSecret?.enabled) {
+        // Prepare the payload
+        const embed = {
+            "title": "New User Registered",
+            "description": `mail ${mail}\ntime ${time}`,
+            "color": 11624960,
+            "footer": {
+                "text": "Cookiecms",
+                "icon_url": "https://avatars.githubusercontent.com/u/152858724?s=200&v=4"
+            }
+        };
+        
+        const data = { embeds: [embed] };
+        
+        const spamming = config.AuditSecret.spamming;
+        logger.info(`Spamming: ${spamming}`);    
+        
+        const auditUrl = `${config.AuditSecret.url}?thread_id=${spamming}`;
+        await axios.post(auditUrl, data);
+    } else {
+        logger.info("Audit not enabled");
+    }
+}
 
 export default {
     createResponse,
     addaudit,
     checkPermission,
-    addNewTask
-    // sendEmbed
+    addNewTask,
+    sendEmbed
 };

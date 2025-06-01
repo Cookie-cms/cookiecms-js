@@ -1,18 +1,18 @@
 services:
-  mysql:
-    image: 'mysql:8.0'
-    container_name: mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: cookiecms
-      MYSQL_USER: cookiecms
-      MYSQL_PASSWORD: cookiecms
-    ports:
-      - '34002:3306'
-    volumes:
-      - './:/application'
-      - mysqld_socket:/run/mysqld
-    command: --bind-address=0.0.0.0 && ./install_docker.sh
+  # mysql:
+  #   image: 'mysql:8.0'
+  #   container_name: mysql
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: root
+  #     MYSQL_DATABASE: cookiecms
+  #     MYSQL_USER: cookiecms
+  #     MYSQL_PASSWORD: cookiecms
+  #   ports:
+  #     - '34002:3306'
+  #   volumes:
+  #     - './:/application'
+  #     - mysqld_socket:/run/mysqld
+  #   command: --bind-address=0.0.0.0 && ./install_docker.sh
 
   phpmyadmin:
     image: 'phpmyadmin/phpmyadmin'

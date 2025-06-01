@@ -1,21 +1,22 @@
+import fs from 'fs/promises';
+import path from 'path';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import sharp from 'sharp';
-import mysql from '../../inc/mysql.js';
+import knex from '../../inc/knex.js';
 import readConfig from '../../inc/yamlReader.js';
-import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
-import fs from 'fs/promises';
-import path from 'path';
 import logger from '../../logger.js';
+import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 
 const config = readConfig();
+const JWT_SECRET_KEY = config.securecode;
 
-
+// Configure multer storage
 const storage = multer.diskStorage({
-  destination: function(req, file, cb) {
+  destination: function (req, file, cb) {
     cb(null, 'uploads/skins/');
   },
-  filename: function(req, file, cb) {
+  filename: function (req, file, cb) {
     const uuid = uuidv4();
     req.fileUuid = uuid;
     cb(null, `${uuid}.png`);
@@ -24,64 +25,61 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: {
-    fileSize: 2 * 1024 * 1024 // 2MB
-  },
-  fileFilter: function(req, file, cb) {
-    if (file.mimetype !== 'image/png') {
-      cb(new Error('Only PNG files are allowed'));
-      return;
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: function (req, file, cb) {
+    // Accept only images
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image files are allowed!'));
     }
     cb(null, true);
   }
-}).single('file');
-
-async function validateUser(connection, userId) {
-  logger.info(userId);
-  const [user] = await connection.query('SELECT id, perms FROM users WHERE id = ?', [userId]);
-  if (!user.length) {
-    throw new Error('User not found');
-  }
-  return user[0];
-}
+}).single('skin');
 
 async function uploadSkinRoute(req, res) {
-  let connection;
   try {
-    // Validate JWT
-    const token = req.headers['authorization']?.replace('Bearer ', '');
+    const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
+
     if (!token) {
-      return res.status(401).json({ error: true, msg: 'Invalid token' });
+      return res.status(401).json({ error: true, msg: 'Authentication required' });
     }
 
-    connection = await mysql.getConnection();
-    const status = await isJwtExpiredOrBlacklisted(token, connection, config.securecode);
-    
+    const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
     if (!status.valid) {
       return res.status(401).json({ error: true, msg: status.message });
     }
 
     const userId = status.data.sub;
 
-    // Validate user exists
-    const user = await validateUser(connection, userId);
+    // Check if user exists and has permissions
+    const user = await knex('users')
+      .where('id', userId)
+      .first('perms');
 
-    upload(req, res, async (err) => {
+    if (!user) {
+      return res.status(404).json({ error: true, msg: 'User not found' });
+    }
+
+    // Check if user has permission to upload skins
+    if (!config.permissions[user.perms]?.includes('profile.changeskin')) {
+      return res.status(403).json({ error: true, msg: 'No permission to upload skins' });
+    }
+
+    upload(req, res, async function (err) {
+      if (err instanceof multer.MulterError) {
+        return res.status(400).json({ error: true, msg: `Upload error: ${err.message}` });
+      } else if (err) {
+        return res.status(500).json({ error: true, msg: `Error: ${err.message}` });
+      }
+
       try {
-        if (err) {
-          return res.status(400).json({ error: true, msg: err.message });
-        }
-
         if (!req.file) {
           return res.status(400).json({ error: true, msg: 'No file uploaded' });
         }
 
-        // Process image
         const metadata = await sharp(req.file.path).metadata();
         const hd = metadata.width > 64 || metadata.height > 64;
         const slim = req.body.slim === 'true' || req.body.slim === true;
         
-
         // Check HD permissions
         if (hd && !config.permissions[user.perms]?.includes('profile.changeskinHD')) {
           await fs.unlink(req.file.path);
@@ -89,51 +87,54 @@ async function uploadSkinRoute(req, res) {
         }
 
         // Save to database using transaction
-        await connection.beginTransaction();
-        try {
-          const [a] = await connection.query(
-            'INSERT INTO skins_library (uuid, name, ownerid, slim, hd, disabled, cloak_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [req.fileUuid, req.file.originalname, userId, slim, hd, false, '0']
-          );
-
-          const [existingSkin] = await connection.query("SELECT * FROM skin_user WHERE uid = ?", [userId]);
-
-          if (existingSkin.length > 0) {
-              await connection.query('UPDATE skin_user SET skin_id = ? WHERE uid = ?', [req.fileUuid, userId]);
-          } else {
-              await connection.query(
-                'INSERT INTO skin_user (uid, skin_id) VALUES (?, ?)',
-                [userId, req.fileUuid]
-              );
-          }
-
-
-          await connection.commit();
-
-          res.status(200).json({
-            error: false,
-            msg: 'Skin uploaded successfully',
-            data: { uuid: req.fileUuid, name: req.file.originalname, slim, hd }
+        await knex.transaction(async (trx) => {
+          // Insert skin record
+          await trx('skins_library').insert({
+            uuid: req.fileUuid,
+            name: req.file.originalname,
+            ownerid: userId,
+            slim: slim,
+            hd: hd,
+            disabled: false,
+            cloak_id: '0'
           });
-        } catch (dbError) {
-          await connection.rollback();
-          throw dbError;
-        }
+
+          // Check if user has a selected skin and update or insert
+          const existingSkin = await trx('skin_user')
+            .where('uid', userId)
+            .first();
+
+          if (existingSkin) {
+            await trx('skin_user')
+              .where('uid', userId)
+              .update({ skin_id: req.fileUuid });
+          } else {
+            await trx('skin_user')
+              .insert({
+                uid: userId,
+                skin_id: req.fileUuid
+              });
+          }
+        });
+
+        return res.status(200).json({
+          error: false,
+          msg: 'Skin uploaded successfully',
+          data: { uuid: req.fileUuid, name: req.file.originalname, slim, hd }
+        });
       } catch (error) {
+        // Clean up file on error
         if (req.file) {
           await fs.unlink(req.file.path).catch(logger.error);
         }
-        logger.info('Error processing upload:', error);
-        res.status(500).json({ error: true, msg: 'Error processing upload: ' + error.message });
+        logger.error('Upload error:', error);
+        return res.status(500).json({ error: true, msg: 'Error processing upload: ' + error.message });
       }
     });
   } catch (error) {
-    logger.error('Error during skin upload:', error);
-    res.status(500).json({ error: true, msg: 'Internal server error' });
-  } finally {
-    if (connection) connection.release();
+    logger.error('Error in upload route:', error);
+    return res.status(500).json({ error: true, msg: 'Internal server error' });
   }
 }
-
 
 export default uploadSkinRoute;

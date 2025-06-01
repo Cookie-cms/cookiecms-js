@@ -1,7 +1,8 @@
-import mysql from '../../inc/mysql.js';
+import knex from '../../inc/knex.js';
 import readConfig from '../../inc/yamlReader.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
-import { checkPermission,addNewTask } from '../../inc/_common.js';
+import { checkPermission, addNewTask } from '../../inc/_common.js';
+import logger from '../../logger.js';
 
 const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;
@@ -13,63 +14,51 @@ export async function user_role(req, res) {
         return res.status(401).json({ error: true, msg: 'Invalid JWT', code: 401 });
     }
 
-    let connection;
     try {
-        connection = await mysql.getConnection();
-        
-        const status = await isJwtExpiredOrBlacklisted(token, connection, JWT_SECRET_KEY);
+        const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
         
         if (!status.valid) {
-            connection.release();
             return res.status(401).json({ error: true, msg: status.message, code: 401 });
         }
 
-        if (!await checkPermission(connection, status.data.sub, 'admin.useredit')) {
-            connection.release();
-            return res.status(403).json({ error: 'Insufficient permissions' });
+        if (!await checkPermission(status.data.sub, 'admin.useredit')) {
+            return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
         }
 
         const { user, role_level, expired_at } = req.body;
 
         // Validate inputs
         if (!user || !role_level) {
-            connection.release();
-            return res.status(400).json({ error: 'User ID and role level are required' });
+            return res.status(400).json({ error: true, msg: 'User ID and role level are required' });
         }
 
         if (![1, 2, 3].includes(Number(role_level))) {
-            connection.release();
-            return res.status(400).json({ error: 'Invalid role level. Must be 1, 2, or 3' });
+            return res.status(400).json({ error: true, msg: 'Invalid role level. Must be 1, 2, or 3' });
         }
 
         // Check if user exists
-        const [userExists] = await connection.execute(
-            'SELECT id FROM users WHERE id = ?',
-            [user]
-        );
+        const userExists = await knex('users')
+            .where({ id: user })
+            .first();
 
-        if (userExists.length === 0) {
-            connection.release();
-            return res.status(404).json({ error: 'User not found' });
+        if (!userExists) {
+            return res.status(404).json({ error: true, msg: 'User not found' });
         }
 
-        // Update user role
-        addNewTask(connection, user, 'role', role_level, expired_at);
-
-        const query = "UPDATE users SET role = ? WHERE id = ?";
-        const values = [role_level, user];
-
-        const [result] = await connection.execute(query, values);
-
-        connection.release();
-
-        if (result.affectedRows === 0) {
-            return res.status(500).json({ error: 'Failed to update user role' });
-        }
+        // Update user role using Knex transaction
+        await knex.transaction(async (trx) => {
+            // Add task
+            await addNewTask('role', user, role_level, expired_at);
+            
+            // Update user
+            await trx('users')
+                .where({ id: user })
+                .update({ role: role_level });
+        });
 
         return res.json({
-            success: true,
-            message: 'User role updated successfully',
+            error: false,
+            msg: 'User role updated successfully',
             data: {
                 user,
                 role_level,
@@ -78,9 +67,8 @@ export async function user_role(req, res) {
         });
 
     } catch (error) {
-        if (connection) connection.release();
         logger.error('Error updating user role:', error);
-        return res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: true, msg: 'Internal server error' });
     }
 }
 

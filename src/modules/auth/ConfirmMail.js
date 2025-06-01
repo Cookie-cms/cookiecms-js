@@ -1,15 +1,13 @@
-import mysql from '../../inc/mysql.js';
+import knex from '../../inc/knex.js';
 import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 
-
 const config = readConfig();
-const JWT_SECRET_KEY = config.securecode;
 
 async function ConfirmMail(req, res) {
     const { code } = req.body;
 
-    if (config.production = "demo") {
+    if (config.production === "demo") {
         return res.status(403).json({ error: true, msg: 'Email confirmation is disabled in demo mode.' });
     }
 
@@ -18,43 +16,41 @@ async function ConfirmMail(req, res) {
     }
 
     try {
-        const connection = await mysql.getConnection();
+        const result = await knex('verify_codes')
+            .join('users', 'verify_codes.userid', '=', 'users.id')
+            .select('verify_codes.userid', 'verify_codes.action', 'verify_codes.expire')
+            .where('verify_codes.code', code)
+            .first();
 
-        const [result] = await connection.query(`
-            SELECT vc.userid, vc.action, vc.expire
-            FROM verify_codes vc 
-            JOIN users u ON vc.userid = u.id 
-            WHERE vc.code = ?
-        `, [code]);
-
-        if (result.length === 0) {
-            connection.release();
+        if (!result) {
             return res.status(400).json({ error: true, msg: 'Invalid or expired token' });
         }
 
-        const codeData = result[0];
         const currentTime = Math.floor(Date.now() / 1000);
 
-        if (currentTime > codeData.expire) {
-            connection.release();
+        if (currentTime > result.expire) {
             return res.status(400).json({ error: true, msg: 'Token has expired' });
         }
 
-        if (codeData.action === 1) {
-            await connection.query("UPDATE users SET mail_verify = 1 WHERE id = ?", [codeData.userid]);
-            await connection.query("DELETE FROM verify_codes WHERE code = ?", [code]);
+        if (result.action === 1) {
+            await knex.transaction(async trx => {
+                await trx('users')
+                    .where('id', result.userid)
+                    .update({ mail_verify: 1 });
 
-            connection.release();
+                await trx('verify_codes')
+                    .where('code', code)
+                    .delete();
+            });
+
             return res.status(200).json({ error: false, msg: 'Email confirmed successfully', url: '/login' });
         } else {
-            connection.release();
             return res.status(400).json({ error: true, msg: 'Invalid or expired token' });
         }
     } catch (err) {
-        logger.error("[ERROR] MySQL Error: ", err);
+        logger.error("[ERROR] Database Error: ", err);
         return res.status(500).json({ error: true, msg: 'Database Error' });
     }
 };
-
 
 export default ConfirmMail;
