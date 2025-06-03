@@ -30,21 +30,26 @@ async function resetPassword(req, res) {
     try {
         // Check if email exists
         const user = await knex('users')
-            .where(knex.raw('BINARY mail = ?', [validatedMail]))
+            .whereRaw('LOWER(mail) = LOWER(?)', [validatedMail])
             .first('id');
 
         if (!user) {
             return res.status(404).json({ error: true, msg: 'Email not found.' });
         }
+        let randomCode = '';
 
         // Generate a new verification code
-        const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        let randomCode = '';
-        const length = 6;
-        for (let i = 0; i < length; i++) {
-            randomCode += characters.charAt(Math.floor(Math.random() * characters.length));
-        }
+        if (config.env === "prod") {
 
+            const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            let randomCode = '';
+            const length = 6;
+            for (let i = 0; i < length; i++) {
+                randomCode += characters.charAt(Math.floor(Math.random() * characters.length));
+            }
+        } else {
+            randomCode = "CODE123";
+        }
         const timexp = Math.floor(Date.now() / 1000) + 3600; // Expires in 1 hour
         const action = 4;
 

@@ -4,9 +4,9 @@ import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
-import sendEmbed from '../../inc/_common.js';
+import sendEmbed from '../../inc/common.js';
 import { generateJwtToken } from '../../inc/jwtHelper.js';
-import { addaudit } from '../../inc/_common.js';
+import { addaudit } from '../../inc/common.js';
 
 const config = readConfig();
 

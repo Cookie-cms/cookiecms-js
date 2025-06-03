@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt';
-import { createResponse, addaudit } from '../../inc/_common.js';
+import { createResponse, addaudit } from '../../inc/common.js';
 import knex from '../../inc/knex.js';
 import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';

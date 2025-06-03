@@ -1,7 +1,7 @@
 import mysql from './mysql.js';
 import readConfig from './yamlReader.js';
 import { isJwtExpiredOrBlacklisted } from './jwtHelper.js';
-import { checkPermission } from './_common.js';
+import { checkPermission } from './common.js';
 
 const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;

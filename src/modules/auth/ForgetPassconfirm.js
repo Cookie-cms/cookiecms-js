@@ -2,7 +2,7 @@ import knex from '../../inc/knex.js';
 import readConfig from '../../inc/yamlReader.js';
 import bcrypt from 'bcrypt';
 import logger from '../../logger.js';
-import createResponse from '../../inc/_common.js';
+import createResponse from '../../inc/common.js';
 
 const config = readConfig();
 

@@ -1,6 +1,6 @@
 import knex from '../../../inc/knex.js';
 import { isJwtExpiredOrBlacklisted, generateJwtToken } from '../../../inc/jwtHelper.js';
-import { addaudit, createResponse } from '../../../inc/_common.js';
+import { addaudit, createResponse } from '../../../inc/common.js';
 import logger from '../../../logger.js';
 import readConfig from '../../../inc/yamlReader.js';
 import { updateDiscordInfo, insertDiscordInfo } from './discordinfo.js';

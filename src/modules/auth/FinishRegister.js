@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import readConfig from '../../inc/yamlReader.js';
 import knex from '../../inc/knex.js';
-import { addaudit } from '../../inc/_common.js';
+import { addaudit } from '../../inc/common.js';
 import logger from '../../logger.js';
 
 const config = readConfig();

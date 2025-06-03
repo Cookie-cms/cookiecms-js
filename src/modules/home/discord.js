@@ -3,7 +3,7 @@ import knex from '../../inc/knex.js';
 import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
-import { addaudit } from '../../inc/_common.js';
+import { addaudit } from '../../inc/common.js';
 
 const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;

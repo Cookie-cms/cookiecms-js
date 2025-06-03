@@ -5,7 +5,7 @@ import axios from 'axios';
 import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 import { sendVerificationEmail, sendWelcomeEmail } from '../../inc/mail_templates.js';
-import { addaudit } from '../../inc/_common.js';
+import { addaudit } from '../../inc/common.js';
 
 const config = readConfig();
 
@@ -40,7 +40,7 @@ export async function signup(req, res) {
     try {
         // Check if email already exists
         const existingUser = await knex('users')
-            .whereRaw('BINARY mail = ?', [validatedMail])
+            .whereRaw('LOWER(mail) = LOWER(?)', [validatedMail])
             .first();
 
         if (existingUser) {
@@ -57,21 +57,26 @@ export async function signup(req, res) {
                     mail: validatedMail,
                     password: hashedPassword
                 })
-                .returning('id');
+                .returning('id')
+                .then(rows => rows.map(row => row.id || row));
                 
             // Add audit log
-            await addaudit(userId, 1, userId, null, null, null);
+            // console.log(userId, 1, userId, null, null, null);
 
             // Generate verification code
-            const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
             let randomCode = '';
-            const length = 6;
-            for (let i = 0; i < length; i++) {
-                randomCode += characters.charAt(Math.floor(Math.random() * characters.length));
+            if (config.env === "prod") {
+                const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+                const length = 6;
+                for (let i = 0; i < length; i++) {
+                    randomCode += characters.charAt(Math.floor(Math.random() * characters.length));
+                }
+            } else {
+                randomCode = "CODE123";
             }
             const timexp = Math.floor(Date.now() / 1000) + 3600;
             const action = 1;
-
+            
             // Insert verification code
             await trx('verify_codes')
                 .insert({
@@ -80,12 +85,16 @@ export async function signup(req, res) {
                     expire: timexp,
                     action: action
                 });
-                
+            
+            await trx.commit();
             // Send verification and welcome emails
-            await sendVerificationEmail(validatedMail, randomCode, randomCode);
+            // await sendVerificationEmail(validatedMail, randomCode, randomCode);
             
             const logo = "";
-            await sendWelcomeEmail(mail, userId, logo);
+            if (config.env === "prod") {
+                await sendWelcomeEmail(mail, userId, logo);
+            }
+
         });
 
         return res.status(200).json({ 
@@ -94,7 +103,7 @@ export async function signup(req, res) {
             url: "/signin" 
         });
     } catch (err) {
-        logger.error("[ERROR] Database Error: ", err);
+        console.log("[ERROR] Database Error: ", err);
         return res.status(500).json({ 
             error: true, 
             msg: "An error occurred during registration. Please try again later." 

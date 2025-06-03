@@ -1,4 +1,4 @@
-import { checkPermission } from '../../inc/_common.js';
+import { checkPermission } from '../../inc/common.js';
 import knex from '../../inc/knex.js';
 import readConfig from '../../inc/yamlReader.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';

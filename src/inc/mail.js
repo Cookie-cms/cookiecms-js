@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import { readFile } from 'fs/promises';
 import readConfig from '../inc/yamlReader.js';
+import logger from '../logger.js';
 
 const config = readConfig();
 

@@ -4,6 +4,7 @@ ServiceApiToken: 2aiajDNUhW95HlSHcRDJK0psCBBGazwGWbnZi99Vcirb82SIEeNvxqKmqAJlwxu
 MaxSavedSkins: 1
 domain: http://localhost:3000
 demo: false
+env: testing
 logLevel:
   - info
   - warn
@@ -12,6 +13,7 @@ AuditSecret:
   enabled: true
   url: https://discord.com/api/webhooks/1343232382773493881/U8gmFOOEL9X83JNv1AIjbDVkL1O2IZGWCmJR8WXRyQq-wcSwgAD1IYFhT_z_EWdDecqe
 database:
+  type: postgres
   host: localhost
   username: cookiecms
   pass: cookiecms

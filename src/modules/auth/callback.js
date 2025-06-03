@@ -2,7 +2,7 @@ import oauth from '@cookie-cms/oauth2-discord';
 import jwt from 'jsonwebtoken';
 import knex from '../../inc/knex.js';
 import logger from '../../logger.js';
-import { createResponse, addaudit } from '../../inc/_common.js';
+import { createResponse, addaudit } from '../../inc/common.js';
 import readConfig from '../../inc/yamlReader.js';
 
 const config = readConfig();
@@ -22,7 +22,7 @@ function generateToken(userId) {
 
 async function linkDiscordToUser(userResponse, userId) {
     await knex('users')
-        .where('id', userId)
+        .where('id', uid)
         .update({ dsid: userResponse.id });
 
     await addaudit(userId, 9, userId, null, userResponse.id, 'dsid');

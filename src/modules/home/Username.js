@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import readConfig from '../../inc/yamlReader.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import logger from '../../logger.js';
-import { addaudit } from '../../inc/_common.js';
+import { addaudit } from '../../inc/common.js';
 
 const config = readConfig();
 const JWT_SECRET_KEY = config.securecode;

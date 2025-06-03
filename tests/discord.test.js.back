@@ -1,0 +1,138 @@
+import axios from 'axios';
+import request from 'supertest';
+import app from '../src/app'; // твой Express app
+
+const DISCORD_MOCK = {
+  baseUrl: 'http://localhost:8081',
+  client_id: 'test_client_id',
+  redirect_uri: 'http://localhost:3000/api/auth/discord/callback',
+  scope: 'identify email',
+};
+
+describe('Discord OAuth: getting code and callback', () => {
+  let oauthCode;
+
+  it('should get OAuth code from Discord mock server', async () => {
+    const params = new URLSearchParams({
+      client_id: DISCORD_MOCK.client_id,
+      redirect_uri: DISCORD_MOCK.redirect_uri,
+      response_type: 'code',
+      scope: DISCORD_MOCK.scope,
+    });
+
+    let response;
+    try {
+      response = await axios.get(
+        `${DISCORD_MOCK.baseUrl}/oauth2/authorize?${params.toString()}`,
+        {
+          maxRedirects: 0,
+          validateStatus: status => status >= 200 && status < 400,
+        }
+      );
+    } catch (err) {
+      response = err.response;
+    }
+
+    expect(response.status).toBe(302);
+    expect(response.headers).toHaveProperty('location');
+
+    const location = response.headers.location;
+    expect(location).toContain(DISCORD_MOCK.redirect_uri);
+    expect(location).toMatch(/code=[\w-]+/);
+
+    oauthCode = new URL(location, 'http://localhost').searchParams.get('code');
+    expect(oauthCode).toBeDefined();
+
+    // Сохраняем для следующего теста
+    global.oauthCode = oauthCode;
+  });
+
+  it('should handle Discord OAuth callback when user exists (return JWT)', async () => {
+    const code = global.oauthCode;
+    const res = await request(app)
+      .get(`/api/auth/discord/callback?code=${code}`)
+      .expect(200);
+
+    expect(res.body.error).toBe(false);
+    expect(res.body.msg.toLowerCase()).toMatch(/successfully/);
+    expect(res.body.data).toHaveProperty('jwt');
+    expect(res.body.data).toHaveProperty('userid');
+    expect(res.body.data).toHaveProperty('username');
+    expect(res.body.data).toHaveProperty('avatar');
+  });
+
+  it('should handle Discord OAuth callback when user NOT found (404 + data)', async () => {
+    const fakeCode = 'nonexistent-code-12345';
+
+    const res = await request(app)
+      .get(`/api/auth/discord/callback?code=${fakeCode}`)
+      .expect(404);
+
+    expect(res.body.error).toBe(true);
+    expect(res.body.msg.toLowerCase()).toMatch(/user not found/);
+    expect(res.body.data).toHaveProperty('user');
+    expect(res.body.data.user).toHaveProperty('id');
+  });
+});
+
+describe('Discord Account Linking and Registration', () => {
+  it('should link discord account to existing user', async () => {
+    const linkPayload = {
+      username: 'testuser',
+      password: 'testpassword',
+      meta: {
+        id: 'discord-user-id',
+        conn_id: 0,
+      },
+    };
+
+    const res = await request(app)
+      .post('/api/auth/discord/link')
+      .send(linkPayload)
+      .expect(200);
+
+    expect(res.body.error).toBe(false);
+    expect(res.body.msg.toLowerCase()).toMatch(/linked/);
+    expect(res.body.data).toHaveProperty('jwt');
+  });
+
+  it('should register new account via discord', async () => {
+    const registerPayload = {
+      meta: {
+        id: 'discord-user-id',
+        conn_id: 0,
+      },
+    };
+
+    const res = await request(app)
+      .post('/api/auth/register/discord')
+      .send(registerPayload)
+      .expect(200);
+
+    expect(res.body.error).toBe(false);
+    expect(res.body.msg.toLowerCase()).toMatch(/login successful/);
+    expect(res.body.data).toHaveProperty('jwt');
+  });
+
+  // Здесь можно раскомментировать и адаптировать тест на конфликт линка, если нужно
+  /*
+  it('should handle conflict when linking already linked account', async () => {
+    const conflictPayload = {
+      username: 'anotheruser',
+      password: 'anotherpassword',
+      meta: {
+        id: 'discord-user-id-already-linked',
+        conn_id: 0,
+      },
+    };
+
+    const res = await request(app)
+      .post('/api/auth/discord/link')
+      .send(conflictPayload)
+      .expect(409);
+
+    expect(res.body.error).toBe(true);
+    expect(res.body.msg.toLowerCase()).toMatch(/already linked/);
+  });
+  */
+});

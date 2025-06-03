@@ -2,7 +2,7 @@ import knex from '../../inc/knex.js';
 import readConfig from '../../inc/yamlReader.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import Mail from 'nodemailer/lib/mailer/index.js';
-import { checkPermission, addaudit } from '../../inc/_common.js';
+import { checkPermission, addaudit } from '../../inc/common.js';
 import logger from '../../logger.js';
 
 const config = readConfig();

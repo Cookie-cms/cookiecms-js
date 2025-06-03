@@ -6,10 +6,11 @@
   "type": "module",
   "bin": "src/app.js",
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "nodemon src/app.js",
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
     "db:init": "node scripts/db/init.js",
-    "db:seed": "node scripts/db/seed.js"
+    "db:seed": "node scripts/db/seed.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
   },
   "dependencies": {
     "@cookie-cms/oauth2-discord": "npm:@Cookie-cms/oauth2-discord@^0.0.1",
@@ -30,14 +31,19 @@
     "nodemailer": "^6.10.0",
     "pg": "^8.16.0",
     "sharp": "^0.33.5",
+    "supertest": "^7.1.1",
     "uuid": "^11.0.5",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
+    "jest": "^29.7.0",
     "nodemon": "latest",
     "standard-version": "^9.5.0"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "jest": {
+  "testEnvironment": "node"
+}
 }
