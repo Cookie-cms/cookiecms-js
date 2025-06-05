@@ -109,6 +109,31 @@ router.post('/gravit/joinserver', gl_joinServer);
 router.post('/gravit/checkserver', gl_checkServer);
 
 
+function hardwareEcho(req, res) {
+    console.log('HARDWARE API:', {
+        method: req.method,
+        url: req.originalUrl,
+        query: req.query,
+        body: req.body,
+        headers: req.headers,
+    });
+    res.sendStatus(201); // 201 Created, без тела
+}
+
+router.all('/gravit/gethardwarebykey', hardwareEcho);
+router.all('/gravit/gethardwarebydata', hardwareEcho);
+router.all('/gravit/gethardwarebyid', hardwareEcho);
+router.all('/gravit/createhardware', hardwareEcho);
+router.all('/gravit/connectuserhardware', hardwareEcho);
+router.all('/gravit/addpublickey', hardwareEcho);
+router.all('/gravit/getusersbyhardware', hardwareEcho);
+router.all('/gravit/banhardware', hardwareEcho);
+router.all('/gravit/unbanhardware', hardwareEcho);
+
 export default router;
+
+
+
+
 
 

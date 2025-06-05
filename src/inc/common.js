@@ -5,9 +5,8 @@ import logger from '../logger.js';
 
 const config = readConfig();
 
-export function createResponse(error = false, msg = '', url = null, data = {}) {
+export function createResponse(msg = '', url = null, data = {}) {
     return {
-        error: error,
         msg: msg,
         url: url,
         data: data

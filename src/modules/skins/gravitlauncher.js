@@ -23,7 +23,7 @@ async function generateFileHash(filePath) {
     }
 }
 
-async function getSkinData(userUuid) {
+export async function getSkinData(userUuid) {
     if (!isValidUUID(userUuid)) {
         throw new Error('Invalid UUID format');
     }
@@ -94,5 +94,7 @@ export async function gravitLauncherResponse(req, res) {
         res.status(500).json({ error: 'Internal server error' });
     }
 }
+
+
 
 export default gravitLauncherResponse;

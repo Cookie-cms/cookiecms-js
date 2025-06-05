@@ -20,7 +20,7 @@ export async function gl_makeUser(user) {
     username: user.username,
     uuid: user.uuid,
     permissions: user.permissions || ['launcher.*'],
-    roles: user.roles || ['USER'],
+    roles: user.roles || ['Admin'],
     assets: assets || {}
   };
 }

@@ -36,8 +36,11 @@ async function getUserSkins(req, res) {
 
 async function getUserSkins_s(userId) {
     return await knex('skins_library')
-        .select('skins_library.uuid', 'skins_library.name')
-        .select(knex.raw('IFNULL(skins_library.cloak_id, 0) AS cloak_id'))
+        .select(
+            'skins_library.uuid',
+            'skins_library.name',
+            knex.raw("COALESCE(skins_library.cloak_id, '') AS cloak_id")
+        )
         .where('skins_library.ownerid', userId);
 }
 
