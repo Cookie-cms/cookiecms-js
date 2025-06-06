@@ -52,20 +52,20 @@ export function up(knex) {
 
     // HWIDs
     knex.schema.createTable('hwids', table => {
-      table.bigInteger('id').primary();
-      table.binary('publickey');
-      table.string('hwDiskId', 255);
-      table.string('baseboardSerialNumber', 255);
-      table.string('graphicCard', 255);
-      table.binary('displayId');
-      table.integer('bitness');
-      table.bigInteger('totalMemory');
-      table.integer('logicalProcessors');
-      table.integer('physicalProcessors');
-      table.bigInteger('processorMaxFreq');
-      table.boolean('battery').notNullable().defaultTo(false);
-      table.boolean('banned').notNullable().defaultTo(false);
-    }),
+    table.bigIncrements('id').primary(); // исправлено!
+    table.string('publickey'); // лучше хранить как строку, если не бинарь
+    table.string('hwDiskId', 255);
+    table.string('baseboardSerialNumber', 255);
+    table.string('graphicCard', 255);
+    table.string('displayId'); // лучше строка, если не бинарь
+    table.integer('bitness');
+    table.bigInteger('totalMemory');
+    table.integer('logicalProcessors');
+    table.integer('physicalProcessors');
+    table.bigInteger('processorMaxFreq');
+    table.boolean('battery').notNullable().defaultTo(false);
+    table.boolean('banned').notNullable().defaultTo(false);
+  }),
 
     // Job Schedule
     knex.schema.createTable('job_schedule', table => {

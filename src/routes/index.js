@@ -5,7 +5,24 @@ import skins from '../modules/skins/index.js';
 import admin from '../modules/admin/index.js';
 import service from '../modules/service/index.js';
 import UsersList from '../modules/public/users.js';
-import { gl_authorize, gl_getByUsername, gl_getByUuid, gl_getByToken, gl_refreshToken, gl_joinServer, gl_checkServer } from '../modules/service/GravitLauncher.js';
+import {
+    gl_authorize,
+    gl_getByUsername,
+    gl_getByUuid,
+    gl_getByToken,
+    gl_refreshToken,
+    gl_joinServer,
+    gl_checkServer,
+    gl_getHardwareByKey,
+    gl_getHardwareByData,
+    gl_createHardware,
+    gl_connectUserHardware,
+    gl_addPublicKey,
+    gl_getHardwareById,
+    gl_getUsersByHardware,
+    gl_banHardware,
+    gl_unbanHardware
+} from '../modules/service/GravitLauncher.js';
 
 const router = express.Router();
 
@@ -108,27 +125,15 @@ router.post('/gravit/refreshtoken', gl_refreshToken);
 router.post('/gravit/joinserver', gl_joinServer);
 router.post('/gravit/checkserver', gl_checkServer);
 
-
-function hardwareEcho(req, res) {
-    console.log('HARDWARE API:', {
-        method: req.method,
-        url: req.originalUrl,
-        query: req.query,
-        body: req.body,
-        headers: req.headers,
-    });
-    res.sendStatus(201); // 201 Created, без тела
-}
-
-router.all('/gravit/gethardwarebykey', hardwareEcho);
-router.all('/gravit/gethardwarebydata', hardwareEcho);
-router.all('/gravit/gethardwarebyid', hardwareEcho);
-router.all('/gravit/createhardware', hardwareEcho);
-router.all('/gravit/connectuserhardware', hardwareEcho);
-router.all('/gravit/addpublickey', hardwareEcho);
-router.all('/gravit/getusersbyhardware', hardwareEcho);
-router.all('/gravit/banhardware', hardwareEcho);
-router.all('/gravit/unbanhardware', hardwareEcho);
+router.post('/gravit/gethardwarebykey', gl_getHardwareByKey);
+router.post('/gravit/gethardwarebydata', gl_getHardwareByData);
+router.post('/gravit/createhardware', gl_createHardware);
+router.post('/gravit/connectuserhardware', gl_connectUserHardware);
+router.post('/gravit/addpublickey', gl_addPublicKey);
+router.post('/gravit/gethardwarebyid', gl_getHardwareById);
+router.post('/gravit/getusersbyhardware', gl_getUsersByHardware);
+router.post('/gravit/banhardware', gl_banHardware);
+router.post('/gravit/unbanhardware', gl_unbanHardware);
 
 export default router;
 
