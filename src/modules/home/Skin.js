@@ -2,12 +2,12 @@ import fs from 'fs/promises';
 import path from 'path';
 import knex from '../../inc/knex.js';
 import jwt from 'jsonwebtoken';
-import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
+import dotenv from 'dotenv';
 
-const config = readConfig();
-const JWT_SECRET_KEY = config.securecode;
+dotenv.config();
+const JWT_SECRET_KEY = process.env.securecode;
 
 async function removeSkin(userId, skinId) {
     // Check if skin exists and is owned by user

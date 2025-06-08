@@ -1,8 +1,9 @@
 import knex from '../../inc/knex.js';
-import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 
-const config = readConfig();
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 async function ConfirmMail(req, res) {
     const { code } = req.body;

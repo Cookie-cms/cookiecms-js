@@ -1,9 +1,9 @@
 import knex from '../../inc/knex.js';
-import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 
-const config = readConfig(process.env.CONFIG_PATH || '../config.yml');
+import dotenv from 'dotenv';
 
+dotenv.config();
 function validate(data) {
     data = data.trim();
     data = data.replace(/<[^>]*>?/gm, '');
@@ -39,7 +39,7 @@ async function resetPassword(req, res) {
         let randomCode = '';
 
         // Generate a new verification code
-        if (config.env === "prod") {
+        if (process.env.env === "prod") {
 
             const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
             let randomCode = '';

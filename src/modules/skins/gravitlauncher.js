@@ -2,10 +2,12 @@ import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
 import knex from '../../inc/knex.js';
-import readConfig from '../../inc/yamlReader.js';
+import dotenv from 'dotenv';
 import logger from '../../logger.js';
 
-const config = readConfig();
+dotenv.config();
+
+const domain = process.env.DOMAIN;
 
 function isValidUUID(uuid) {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -53,7 +55,7 @@ export async function getSkinData(userUuid) {
 
         const response = {
             SKIN: {
-                url: `${config.domain}/skins/${selectedSkin.uuid}.png`,
+                url: `${domain}/skins/${selectedSkin.uuid}.png`,
                 digest: skinHash
             }
         };
@@ -67,7 +69,7 @@ export async function getSkinData(userUuid) {
             const cloakHash = await generateFileHash(cloakPath);
             if (cloakHash) {
                 response.CAPE = {
-                    url: `${config.domain}/cloaks/${selectedSkin.cloak_id}.png`,
+                    url: `${domain}/cloaks/${selectedSkin.cloak_id}.png`,
                     digest: cloakHash
                 };
             }

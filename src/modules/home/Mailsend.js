@@ -1,13 +1,13 @@
 import knex from '../../inc/knex.js';
 import bcrypt from 'bcrypt';
-import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import { sendVerificationEmail, sendMailUnlinkNotification } from '../../inc/mail_templates.js';
 import { addaudit } from '../../inc/common.js';
+import dotenv from 'dotenv';
 
-const config = readConfig();
-const JWT_SECRET_KEY = config.securecode;
+dotenv.config();
+const JWT_SECRET_KEY = process.env.securecode;
 
 function validate(data) {
     data = data.trim();

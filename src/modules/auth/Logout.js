@@ -1,12 +1,12 @@
 import jwt from 'jsonwebtoken';
 import knex from '../../inc/knex.js';
-import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 import { isJwtExpiredOrBlacklisted, blacklistJwt } from '../../inc/jwtHelper.js';
 
-const config = readConfig(process.env.CONFIG_PATH || '../config.yml');
-const JWT_SECRET_KEY = config.securecode;
+import dotenv from 'dotenv';
 
+dotenv.config();
+const JWT_SECRET_KEY = process.env.securecode;
 async function logout(req, res) {
     const authHeader = req.headers['authorization'];
     if (!authHeader) {

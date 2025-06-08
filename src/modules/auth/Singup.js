@@ -2,12 +2,12 @@ import knex from '../../inc/knex.js';
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
-import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 import { sendVerificationEmail, sendWelcomeEmail } from '../../inc/mail_templates.js';
 import { addaudit } from '../../inc/common.js';
+import dotenv from 'dotenv';
 
-const config = readConfig();
+dotenv.config();
 
 function validate(data) {
     data = data.trim();
@@ -18,7 +18,7 @@ function validate(data) {
 export async function signup(req, res) {
     const { mail, password } = req.body;
 
-    if (config.demo === true) {
+    if (process.env.ENV === "demo") {
         return res.status(403).json({ error: true, msg: "Registration is disabled in demo mode." });
     }
 
@@ -65,7 +65,7 @@ export async function signup(req, res) {
 
             // Generate verification code
             let randomCode = '';
-            if (config.env === "prod") {
+            if (process.env.ENV === "prod") {
                 const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
                 const length = 6;
                 for (let i = 0; i < length; i++) {
@@ -91,7 +91,7 @@ export async function signup(req, res) {
             // await sendVerificationEmail(validatedMail, randomCode, randomCode);
             
             const logo = "";
-            if (config.env === "prod") {
+            if (process.env.ENV === "prod") {
                 await sendWelcomeEmail(mail, userId, logo);
             }
 

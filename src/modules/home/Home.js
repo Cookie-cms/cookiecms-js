@@ -1,10 +1,10 @@
 import knex from '../../inc/knex.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
-import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
+import dotenv from 'dotenv';
 
-const config = readConfig();
-const JWT_SECRET_KEY = config.securecode;
+dotenv.config();
+const JWT_SECRET_KEY = process.env.securecode;
 
 async function getUserSkins(userId) {
     return await knex('skins_library')

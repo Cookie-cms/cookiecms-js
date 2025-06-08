@@ -1,15 +1,16 @@
 import knex from '../../inc/knex.js';
-import readConfig from '../../inc/yamlReader.js';
 import bcrypt from 'bcrypt';
 import logger from '../../logger.js';
 import createResponse from '../../inc/common.js';
 
-const config = readConfig();
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 export async function validate_code_fp(req, res) {
     const { code } = req.body;
 
-    if (config.production === "demo") {
+    if (process.env.production === "demo") {
         return res.status(403).json(createResponse(true, 'Password reset is disabled in demo mode.'));
     }
 

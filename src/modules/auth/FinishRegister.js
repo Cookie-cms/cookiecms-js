@@ -1,13 +1,14 @@
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
-import readConfig from '../../inc/yamlReader.js';
 import knex from '../../inc/knex.js';
 import { addaudit } from '../../inc/common.js';
 import logger from '../../logger.js';
 
-const config = readConfig();
-const JWT_SECRET_KEY = config.securecode;
+import dotenv from 'dotenv';
+
+dotenv.config();
+const JWT_SECRET_KEY = process.env.securecode;
 
 async function finishRegister(req, res) {
     const data = req.body;

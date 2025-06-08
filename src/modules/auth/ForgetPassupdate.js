@@ -1,15 +1,16 @@
 import bcrypt from 'bcrypt';
 import { createResponse, addaudit } from '../../inc/common.js';
 import knex from '../../inc/knex.js';
-import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 
-const config = readConfig();
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 async function updatepass(req, res) {
     const { code, password } = req.body;
 
-    if (config.production === "demo") {
+    if (process.env.ENV === "demo") {
         return res.status(403).json(createResponse(true, 'Password reset is disabled in demo mode.'));
     }
     if (!code || !password) {

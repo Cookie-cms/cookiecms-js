@@ -1,9 +1,7 @@
 import jwt from 'jsonwebtoken';
 import knex from './knex.js';
-import readConfig from './yamlReader.js';
 import logger from '../logger.js';
 
-const config = readConfig();
 
 export async function isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY) {
     try {

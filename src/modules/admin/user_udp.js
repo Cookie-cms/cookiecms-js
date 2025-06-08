@@ -1,11 +1,12 @@
 import knex from '../../inc/knex.js';
-import readConfig from '../../inc/yamlReader.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import { checkPermission } from '../../inc/common.js';
 import logger from '../../logger.js';
 
-const config = readConfig();
-const JWT_SECRET_KEY = config.securecode;
+import dotenv from 'dotenv';
+
+dotenv.config();
+const JWT_SECRET_KEY = process.env.securecode;
 
 export async function user_udp(req, res) {
     const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';

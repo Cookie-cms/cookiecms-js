@@ -1,12 +1,16 @@
 import axios from 'axios';
 import knex from './knex.js';
-import readConfig from './yamlReader.js';
 import logger from '../logger.js';
+import bcrypt from 'bcrypt';
+import argon2 from 'argon2';
 
-const config = readConfig();
+import dotenv from 'dotenv';
 
-export function createResponse(msg = '', url = null, data = {}) {
+dotenv.config();
+
+export function createResponse(error = false,msg = '', url = null, data = {}) {
     return {
+        error: error,
         msg: msg,
         url: url,
         data: data
@@ -188,10 +192,34 @@ export async function sendEmbed(mail) {
     }
 }
 
+export async function verifyPassword(password, hash) {
+  if (hash.startsWith('$2')) {
+    // bcrypt
+    return await bcrypt.compare(password, hash);
+  }
+  if (hash.startsWith('$argon2')) {
+    // argon2
+    return await argon2.verify(hash, password);
+  }
+  throw new Error('Unknown hash algorithm');
+}
+
+export async function hashPassword(password) {
+  if (config.passcrypt.type === 'bcrypt') {
+    return await bcrypt.hash(password, config.passcrypt.rounds || 10);
+  } else if (config.passcrypt.type === 'argon2') {
+    return await argon2.hash(password);
+  } else {
+    throw new Error('Unknown hash algorithm');
+  }
+}
+
 export default {
     createResponse,
     addaudit,
     checkPermission,
     addNewTask,
-    sendEmbed
+    sendEmbed,
+    verifyPassword,
+    hashPassword
 };

@@ -1,10 +1,10 @@
 import knex from '../../inc/knex.js';
-import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 import { sendVerificationEmail } from '../../inc/mail_templates.js';
 
-const config = readConfig(process.env.CONFIG_PATH || '../config.yml');
+import dotenv from 'dotenv';
 
+dotenv.config();
 function validate(data) {
     data = data.trim();
     data = data.replace(/<[^>]*>?/gm, '');
@@ -14,7 +14,7 @@ function validate(data) {
 async function requestVerificationCode(req, res) {
     const { mail } = req.body;
 
-    if (config.production === "demo") { // Fixed assignment to comparison
+    if (process.env.ENV === "demo") { // Fixed assignment to comparison
         return res.status(403).json({ error: true, msg: "Verification code request is disabled in demo mode." });
     }
 

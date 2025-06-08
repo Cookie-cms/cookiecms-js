@@ -1,10 +1,10 @@
 import knex from '../../inc/knex.js';
-import readConfig from '../../inc/yamlReader.js';
+// import readConfig from '../../inc/yamlReader.js';
 import bcrypt from 'bcrypt';
 import logger from '../../logger.js';
 
-const config = readConfig();
-const JWT_SECRET_KEY = config.securecode;
+// const config = readConfig();
+// const JWT_SECRET_KEY = config.securecode;
 
 async function validate_password(userId, password) {
     const user = await knex('users')

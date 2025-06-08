@@ -1,11 +1,12 @@
 import { checkPermission } from '../../inc/common.js';
 import knex from '../../inc/knex.js';
-import readConfig from '../../inc/yamlReader.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import logger from '../../logger.js';
 
-const config = readConfig();
-const JWT_SECRET_KEY = config.securecode;
+import dotenv from 'dotenv';
+
+dotenv.config();
+const JWT_SECRET_KEY = process.env.securecode;
 
 async function getSkins(req, res) {
     try {

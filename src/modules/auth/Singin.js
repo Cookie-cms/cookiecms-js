@@ -1,11 +1,12 @@
 import bcrypt from 'bcrypt';
 import knex from '../../inc/knex.js';
-import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 import { generateJwtToken } from '../../inc/jwtHelper.js';
 
-const config = readConfig();
-const JWT_SECRET_KEY = config.securecode;
+import dotenv from 'dotenv';
+
+dotenv.config();
+const JWT_SECRET_KEY = process.env.securecode;
 
 function validate(data) {
     if (typeof data !== 'string') return '';

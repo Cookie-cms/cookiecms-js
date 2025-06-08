@@ -3,19 +3,21 @@ import jwt from 'jsonwebtoken';
 import knex from '../../inc/knex.js';
 import logger from '../../logger.js';
 import { createResponse, addaudit } from '../../inc/common.js';
-import readConfig from '../../inc/yamlReader.js';
+import readConfig from '../../inc/yamlReader.js.bak/index.js';
 
-const config = readConfig();
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 function generateToken(userId) {
     return jwt.sign(
         {
-            iss: config.NameSite,
+            iss: process.env.NameSite,
             sub: userId,
             iat: Math.floor(Date.now() / 1000),
             exp: Math.floor(Date.now() / 1000) + 3600,
         },
-        config.securecode,
+        process.env.SECURE_CODE,
         { algorithm: 'HS256' }
     );
 }
@@ -37,7 +39,7 @@ async function registerUser(userResponse, req, res) {
         let userIdFromToken = null;
         if (token) {
             try {
-                const decoded = jwt.verify(token, config.securecode);
+                const decoded = jwt.verify(token, process.env.SECURE_CODE);
                 userIdFromToken = decoded.sub;
             } catch (err) {
                 logger.warn("Invalid or expired JWT token");
@@ -105,9 +107,9 @@ export async function discordCallback(req, res) {
 
     try {
         const tokenResponse = await oauth.initOAuth(
-            config.discord.redirect_url,
-            config.discord.client_id,
-            config.discord.secret_id,
+            process.env.DISCORD_REDIRECT_URL,
+            process.env.DISCORD_CLIENT_ID,
+            process.env.DISCORD_SECRET_ID,
             code
         );
         const userResponse = await oauth.getUser(tokenResponse.access_token);

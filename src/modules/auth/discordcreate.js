@@ -2,13 +2,14 @@ import knex from '../../inc/knex.js';
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
-import readConfig from '../../inc/yamlReader.js';
+import readConfig from '../../inc/yamlReader.js.bak/index.js';
 import logger from '../../logger.js';
 import sendEmbed from '../../inc/common.js';
 import { generateJwtToken } from '../../inc/jwtHelper.js';
 import { addaudit } from '../../inc/common.js';
 
-const config = readConfig();
+import dotenv from 'dotenv';
+dotenv.config();
 
 function validate(data) {
     data = data.trim();
@@ -25,7 +26,7 @@ export async function discordcreate(req, res) {
     }
 
     try {
-        const JWT_SECRET_KEY = config.securecode;
+        const JWT_SECRET_KEY = process.env.securecode;
  
         const discord_link = await knex('discord')
             .where('userid', id)

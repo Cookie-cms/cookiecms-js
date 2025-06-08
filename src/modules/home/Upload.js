@@ -4,12 +4,12 @@ import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import sharp from 'sharp';
 import knex from '../../inc/knex.js';
-import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
+import dotenv from 'dotenv';
 
-const config = readConfig();
-const JWT_SECRET_KEY = config.securecode;
+dotenv.config();
+const JWT_SECRET_KEY = process.env.securecode;
 
 // Configure multer storage
 const storage = multer.diskStorage({
@@ -59,10 +59,10 @@ async function uploadSkinRoute(req, res) {
       return res.status(404).json({ error: true, msg: 'User not found' });
     }
 
-    // Check if user has permission to upload skins
-    if (!config.permissions[user.perms]?.includes('profile.changeskin')) {
-      return res.status(403).json({ error: true, msg: 'No permission to upload skins' });
-    }
+    // // Check if user has permission to upload skins
+    // if (!config.permissions[user.perms]?.includes('profile.changeskin')) {
+    //   return res.status(403).json({ error: true, msg: '' });
+    // }
 
     upload(req, res, async function (err) {
       if (err instanceof multer.MulterError) {
@@ -81,10 +81,12 @@ async function uploadSkinRoute(req, res) {
         const slim = req.body.slim === 'true' || req.body.slim === true;
         
         // Check HD permissions
-        if (hd && !config.permissions[user.perms]?.includes('profile.changeskinHD')) {
-          await fs.unlink(req.file.path);
-          return res.status(403).json({ error: true, msg: 'No permission to upload HD skins' });
-        }
+        // if (hd && !config.permissions[user.perms]?.includes('profile.changeskinHD')) {
+        //   await fs.unlink(req.file.path);
+        //   return res.status(403).json({ error: true, msg: 'No permission to upload HD skins' });
+        // }
+
+        logger.info(`User ${userId} uploading skin: ${req.file.originalname}, HD: ${hd}, Slim: ${slim}`);
 
         // Save to database using transaction
         await knex.transaction(async (trx) => {
@@ -128,11 +130,11 @@ async function uploadSkinRoute(req, res) {
           await fs.unlink(req.file.path).catch(logger.error);
         }
         logger.error('Upload error:', error);
-        return res.status(500).json({ error: true, msg: 'Error processing upload: ' + error.message });
+        return res.status(500).json({ error: true, msg: `Error processing upload: ${error.message}` });
       }
     });
   } catch (error) {
-    logger.error('Error in upload route:', error);
+    logger.error(`Error in upload route: ${error} `, );
     return res.status(500).json({ error: true, msg: 'Internal server error' });
   }
 }

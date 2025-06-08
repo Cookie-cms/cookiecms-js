@@ -1,4 +1,4 @@
-import readConfig from './yamlReader.js';
+import readConfig from './yamlReader.js.bak';
 
 const config = readConfig();
 

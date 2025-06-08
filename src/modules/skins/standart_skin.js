@@ -16,19 +16,33 @@ async function sendFile(res, filePath) {
     }
 }
 
+// Функция проверки валидности UUID для PostgreSQL
+function isValidUUID(str) {
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidPattern.test(str);
+}
+
 export async function getSkinFile(req, res) {
     try {
+        const uuid = req.params.uuid;
+        
+        // Проверка на валидность UUID
+        if (!isValidUUID(uuid)) {
+            return res.status(400).send('Invalid UUID format');
+        }
+        
         const skin = await knex('users as u')
             .join('skin_user as su', 'u.id', '=', 'su.uid')
             .join('skins_library as sl', 'su.skin_id', '=', 'sl.uuid')
-            .where('u.uuid', req.params.uuid)
+            .where('u.uuid', uuid)
             .select(
                 'sl.uuid',
                 'sl.slim',
-                knex.raw('NULLIF(sl.cloak_id, \'0\') as cloak_id')
+                knex.raw("NULLIF(sl.cloak_id, '0') as cloak_id")
             )
             .first();
 
+        // Обязательно добавьте эту проверку
         if (!skin || !skin.uuid) {
             return res.status(404).send('Skin not found');
         }

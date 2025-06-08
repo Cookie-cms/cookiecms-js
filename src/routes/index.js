@@ -113,8 +113,8 @@ router.post('/service/user', (req, res) => {
     res.send('Welcome to the Express app!');
 });
 
-router.get('/service/settings', service.getSettings);
-router.put('/service/settings', service.updateSettings);
+// router.get('/service/settings', service.getSettings);
+// router.put('/service/settings', service.updateSettings);
 
 
 router.post('/gravit/authorize', gl_authorize);

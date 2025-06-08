@@ -1,17 +1,18 @@
 import nodemailer from 'nodemailer';
 import { readFile } from 'fs/promises';
-import readConfig from '../inc/yamlReader.js';
+import readConfig from './yamlReader.js.bak/index.js';
 import logger from '../logger.js';
 
-const config = readConfig();
+import dotenv from 'dotenv';
 
+dotenv.config();
 const transporter = nodemailer.createTransport({
-    host: config.smtp.Host,
-    port: config.smtp.Port,
-    secure: config.smtp.Secure, // true for 465, false for other ports
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT,
+    secure: process.env.SMTP_SECURE, // true for 465, false for other ports
     auth: {
-        user: config.smtp.Username,
-        pass: config.smtp.Password
+        user: process.env.SMTP_USERNAME,
+        pass: process.env.SMTP_PASSWORD
     }
 });
 
@@ -34,7 +35,7 @@ async function sendHtmlEmail({ to, subject, templatePath, variables }) {
         await transporter.sendMail({
             from: {
                 name: 'Noreply', // Display name
-                address: config.smtp.Username
+                address: process.env.SMTP_USERNAME
             },            
             to,
             subject,

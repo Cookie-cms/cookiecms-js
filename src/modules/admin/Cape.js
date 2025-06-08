@@ -4,9 +4,11 @@ import fs from 'fs/promises';
 import path from 'path';
 import logger from '../../logger.js';
 import knex from '../../inc/knex.js';
-import readConfig from '../../inc/yamlReader.js';
 
-const config = readConfig();
+import dotenv from 'dotenv';
+
+dotenv.config();
+const JWT_SECRET_KEY = process.env.securecode;
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {

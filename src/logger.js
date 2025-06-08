@@ -2,10 +2,12 @@ import winston from 'winston';
 import 'winston-daily-rotate-file';
 import fs from 'fs';
 import path from 'path';
-import readConfig from './inc/yamlReader.js';
+import dotenv from 'dotenv';
 import { format } from 'winston';
 
-const config = readConfig();
+// Загружаем переменные окружения из .env
+dotenv.config();
+
 const LOG_DIR = 'info';
 
 // Ensure info directory exists
@@ -18,8 +20,9 @@ try {
     process.exit(1);
 }
 
-// Список активных уровней логирования
-const activeLevels = new Set(config.logLevel || ['info']);
+// Получаем активные уровни логирования из переменных окружения
+const logLevelString = process.env.LOG_LEVEL || 'info';
+const activeLevels = new Set(logLevelString.split(',').map(level => level.trim()));
 
 const levels = {
     error: 0,

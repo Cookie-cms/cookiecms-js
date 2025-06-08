@@ -1,12 +1,12 @@
 import knex from '../../inc/knex.js';
 import bcrypt from 'bcrypt';
-import readConfig from '../../inc/yamlReader.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import logger from '../../logger.js';
 import { addaudit } from '../../inc/common.js';
+import dotenv from 'dotenv';
 
-const config = readConfig();
-const JWT_SECRET_KEY = config.securecode;
+dotenv.config();
+const JWT_SECRET_KEY = process.env.securecode;
 
 async function validatePassword(userId, password) {
     const user = await knex('users')

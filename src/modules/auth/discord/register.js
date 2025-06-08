@@ -2,11 +2,12 @@ import knex from '../../../inc/knex.js';
 import { isJwtExpiredOrBlacklisted, generateJwtToken } from '../../../inc/jwtHelper.js';
 import { addaudit, createResponse } from '../../../inc/common.js';
 import logger from '../../../logger.js';
-import readConfig from '../../../inc/yamlReader.js';
 import { updateDiscordInfo, insertDiscordInfo } from './discordinfo.js';
 
-const config = readConfig();
-const JWT_SECRET_KEY = config.securecode;
+import dotenv from 'dotenv';
+
+dotenv.config();
+const JWT_SECRET_KEY = process.env.securecode;
 
 async function registerUser(userResponse, res) {
     const token = userResponse.headers['authorization'] ? userResponse.headers['authorization'].replace('Bearer ', '') : '';
