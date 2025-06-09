@@ -1,64 +1,96 @@
-import bcrypt from 'bcrypt';
-import mysql from '../../inc/mysql.js';
-import jwt from 'jsonwebtoken';
-import readConfig from '../../inc/yamlReader.js';
-import logger from '../../logger.js';
+import knex from '../../inc/knex.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
-import { addaudit } from '../../inc/_common.js';
+import logger from '../../logger.js';
+import { addaudit, verifyPassword, hashPassword } from '../../inc/common.js';
 
-const config = readConfig();
-const JWT_SECRET_KEY = config.securecode;
+import dotenv from 'dotenv';
 
+dotenv.config();
+const JWT_SECRET_KEY = process.env.SECURE_CODE;
 
-async function validatePassword(connection, userId, password) {
-    const [user] = await connection.query("SELECT password FROM users WHERE id = ?", [userId]);
-    return bcrypt.compare(password, user[0].password);
+async function validatePassword(userId, password) {
+    try {
+        const user = await knex('users')
+            .where('id', userId)
+            .first('password');
+            
+        if (!user || !user.password) {
+            logger.warn(`Password validation failed: User ${userId} not found or no password set`);
+            return false;
+        }
+        
+        const isValid = await verifyPassword(password, user.password);
+        return isValid;
+    } catch (error) {
+        logger.error(`Password validation error: ${error.message}`);
+        throw new Error('Password validation failed');
+    }
 }
 
-async function changePassword(connection, userId, currentPassword, newPassword) {
-    if (!await validatePassword(connection, userId, currentPassword)) {
-        throw new Error('Invalid password');
-    }
+async function updatePassword(userId, currentPassword, newPassword) {
+    try {
+        // Validate current password
+        const isValidPassword = await validatePassword(userId, currentPassword);
+        
+        if (!isValidPassword) {
+            return { success: false, message: 'Current password is incorrect' };
+        }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await connection.query("UPDATE users SET password = ? WHERE id = ?", [hashedPassword, userId]);
+        // Hash the new password
+        const hashedPassword = await hashPassword(newPassword);
+        // Update password and add audit
+        await knex.transaction(async (trx) => {
+            await trx('users')
+                .where('id', userId)
+                .update({ password: hashedPassword });
+                
+            await addaudit(userId, 6, userId, null, '[REDACTED]', 'password');
+        });
+
+        return { success: true, message: 'Password updated successfully' };
+    } catch (error) {
+        logger.error(`Password update error: ${error.message}`);
+        throw new Error('Failed to update password');
+    }
 }
 
 async function editPassword(req, res) {
-    const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
-
+    const token = req.headers['authorization']?.replace('Bearer ', '') || '';
+    
     if (!token) {
-        return res.status(401).json({ error: true, msg: 'Invalid token or session expired.' });
-    }
-
-    if (config.demo === true) {
-        return res.status(403).json({ error: true, msg: "Registration is disabled in demo mode." });
+        return res.status(401).json({ error: true, msg: 'Invalid JWT', code: 401 });
     }
 
     try {
-        const connection = await mysql.getConnection();
-        const status = await isJwtExpiredOrBlacklisted(token, connection, JWT_SECRET_KEY);
-
+        const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
+    
         if (!status.valid) {
-            connection.release();
-            return res.status(401).json({ error: true, msg: status.message });
+            return res.status(401).json({ error: true, msg: status.message, code: 401 });
         }
 
         const userId = status.data.sub;
-        const { password, new_password } = req.body;
+        const { currentPassword, newPassword } = req.body;
 
-        if (password && new_password) {
-            await changePassword(connection, userId, password, new_password);
-            addaudit(connection, userId, 6, userId, null, null, 'password');
-            res.status(200).json({ error: false, msg: 'Password updated successfully' });
-        } else {
-            res.status(400).json({ error: true, msg: 'Missing required fields for changing password' });
+        // Проверяем наличие всех необходимых полей
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ error: true, msg: 'Missing required fields for changing password' });
         }
 
-        connection.release();
+        // Проверяем минимальную длину нового пароля
+        if (newPassword.length < 8) {
+            return res.status(400).json({ error: true, msg: 'New password must be at least 8 characters long' });
+        }
+
+        const result = await updatePassword(userId, currentPassword, newPassword);
+        
+        if (result.success) {
+            res.status(200).json({ error: false, msg: result.message });
+        } else {
+            res.status(400).json({ error: true, msg: result.message });
+        }
     } catch (err) {
-        logger.error("[ERROR] MySQL Error: ", err);
-        res.status(500).json({ error: true, msg: 'Internal Server Error: ' + err.message });
+        logger.error(`[ERROR] Password Change Error: ${err.message}`);
+        res.status(500).json({ error: true, msg: 'Internal Server Error' });
     }
 }
 

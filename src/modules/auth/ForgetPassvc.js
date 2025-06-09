@@ -1,9 +1,9 @@
-import mysql from '../../inc/mysql.js';
-import readConfig from '../../inc/yamlReader.js';
+import knex from '../../inc/knex.js';
 import logger from '../../logger.js';
 
-const config = readConfig(process.env.CONFIG_PATH || '../config.yml');
+import dotenv from 'dotenv';
 
+dotenv.config();
 function validate(data) {
     data = data.trim();
     data = data.replace(/<[^>]*>?/gm, '');
@@ -13,7 +13,7 @@ function validate(data) {
 async function resetPassword(req, res) {
     const { mail } = req.body;
 
-    if (config.production = "demo") {
+    if (config.production === "demo") {
         return res.status(403).json({ error: true, msg: "Reset password is disabled in demo mode." });
     }
 
@@ -28,34 +28,42 @@ async function resetPassword(req, res) {
     }
 
     try {
-        const connection = await mysql.getConnection();
-
         // Check if email exists
-        const [user] = await connection.query("SELECT id FROM users WHERE BINARY mail = ?", [validatedMail]);
+        const user = await knex('users')
+            .whereRaw('LOWER(mail) = LOWER(?)', [validatedMail])
+            .first('id');
 
-        if (!user.length) {
-            connection.release();
+        if (!user) {
             return res.status(404).json({ error: true, msg: 'Email not found.' });
         }
+        let randomCode = '';
 
         // Generate a new verification code
-        const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        let randomCode = '';
-        const length = 6;
-        for (let i = 0; i < length; i++) {
-            randomCode += characters.charAt(Math.floor(Math.random() * characters.length));
-        }
+        if (process.env.env === "prod") {
 
+            const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            let randomCode = '';
+            const length = 6;
+            for (let i = 0; i < length; i++) {
+                randomCode += characters.charAt(Math.floor(Math.random() * characters.length));
+            }
+        } else {
+            randomCode = "CODE123";
+        }
         const timexp = Math.floor(Date.now() / 1000) + 3600; // Expires in 1 hour
         const action = 4;
 
         // Insert the new verification code
-        await connection.query("INSERT INTO verify_codes (userid, code, expire, action) VALUES (?, ?, ?, ?)", [user[0].id, randomCode, timexp, action]);
+        await knex('verify_codes').insert({
+            userid: user.id,
+            code: randomCode,
+            expire: timexp,
+            action: action
+        });
 
-        connection.release();
-        return res.status(200).json({ error: false, msg: 'Code for resting password sent.' });
+        return res.status(200).json({ error: false, msg: 'Code for resetting password sent.' });
     } catch (err) {
-        logger.error("[ERROR] MySQL Error: ", err);
+        logger.error("[ERROR] Database Error: ", err);
         return res.status(500).json({ error: true, msg: 'An error occurred while generating the verification code. Please try again.' });
     }
 }

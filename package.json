@@ -6,35 +6,46 @@
   "type": "module",
   "bin": "src/app.js",
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "nodemon src/app.js",
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
     "db:init": "node scripts/db/init.js",
-    "db:seed": "node scripts/db/seed.js"
+    "db:seed": "node scripts/db/seed.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
   },
   "dependencies": {
     "@cookie-cms/oauth2-discord": "npm:@Cookie-cms/oauth2-discord@^0.0.1",
     "@cookie-cms/renderer": "^2.0.1",
+    "argon2": "^0.43.0",
     "axios": "^1.7.9",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
     "express": "latest",
     "express-formidable": "^1.2.0",
+    "http": "^0.0.1-security",
     "inquirer": "^12.4.1",
     "jimp": "^1.6.0",
     "js-yaml": "^4.1.0",
     "jsonwebtoken": "^9.0.2",
+    "knex": "^3.1.0",
     "multer": "^1.4.5-lts.1",
-    "mysql2": "^3.12.0",
+    "mysql2": "^3.14.1",
     "nodemailer": "^6.10.0",
+    "pg": "^8.16.0",
     "sharp": "^0.33.5",
+    "supertest": "^7.1.1",
     "uuid": "^11.0.5",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
+    "jest": "^29.7.0",
     "nodemon": "latest",
     "standard-version": "^9.5.0"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "jest": {
+    "testEnvironment": "node"
+  }
 }

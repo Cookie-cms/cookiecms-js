@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs';
-import mysql from '../../inc/mysql.js';
+import knex from '../../inc/knex.js';
 import logger from '../../logger.js';
 
 async function sendFile(res, filePath) {
@@ -17,35 +17,26 @@ async function sendFile(res, filePath) {
 }
 
 export async function getCloakFile(req, res) {
-    let connection;
     try {
-        connection = await mysql.getConnection();
-        
-        const [skin] = await connection.execute(`
-            SELECT 
-                NULLIF(sl.cloak_id, '0') as cloak_id
-            FROM users u
-            JOIN skin_user su ON u.id = su.uid
-            JOIN skins_library sl ON su.skin_id = sl.uuid
-            WHERE u.uuid = ?
-        `, [req.params.uuid]);
+        const skin = await knex('users as u')
+            .join('skin_user as su', 'u.id', '=', 'su.uid')
+            .join('skins_library as sl', 'su.skin_id', '=', 'sl.uuid')
+            .where('u.uuid', req.params.uuid)
+            .select(knex.raw('NULLIF(sl.cloak_id, \'0\') as cloak_id'))
+            .first();
 
         logger.debug(skin);
 
-        if (!skin.length || !skin[0].cloak_id || skin[0].cloak_id === 'null') {
+        if (!skin || !skin.cloak_id || skin.cloak_id === 'null') {
             return res.status(404).send('Cloak not found');
         }
 
-        const filePath = path.join('uploads/capes/', `${skin[0].cloak_id}.png`);
+        const filePath = path.join('uploads/capes/', `${skin.cloak_id}.png`);
         return sendFile(res, filePath);
 
     } catch (error) {
         logger.error('Error getting cloak:', error);
         res.status(500).send('Internal server error');
-    } finally {
-        if (connection) {
-            connection.release();
-        }
     }
 }
 

@@ -1,0 +1,293 @@
+import request from 'supertest';
+import app from '../src/app.js';
+import knex from '../src/inc/knex.js';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+
+// Мок данные для тестов
+const TEST_USER = {
+  mail: 'test@example.com',
+  username: 'testuser',
+  password: 'password123'
+};
+
+const TEST_CODE = 'CODE123';
+let authToken;
+
+// Очистка и подготовка тестовых данных перед тестами
+beforeAll(async () => {
+  // Очистка тестовых данных
+  await knex('verify_codes').where('code', TEST_CODE).delete();
+  await knex('users').where('mail', TEST_USER.mail).delete();
+  
+  // Создаем тестового пользователя
+  const hashedPassword = await bcrypt.hash(TEST_USER.password, 10);
+  await knex('users').insert({
+    mail: TEST_USER.mail,
+    username: TEST_USER.username,
+    password: hashedPassword,
+    mail_verify: 1
+  });
+});
+
+// Очистка данных после тестов
+afterAll(async () => {
+  await knex('verify_codes').where('code', TEST_CODE).delete();
+  await knex('users').where('mail', TEST_USER.mail).delete();
+  await knex.destroy();
+});
+
+describe('Auth API', () => {
+  describe('Register', () => {
+    it('should register a new user', async () => {
+      const newUser = {
+        mail: 'new@example.com',
+        password: 'newpassword123'
+      };
+
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send(newUser);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.error).toBe(false);
+      expect(res.body.msg).toMatch(/registration successful/i);
+      expect(res.body.url).toBe('/signin');
+
+      // Проверка что пользователь создан в БД
+      const user = await knex('users').where('mail', newUser.mail).first();
+      expect(user).toBeTruthy();
+      
+      // Очистим созданного пользователя
+      if (user) {
+        await knex('users').where('id', user.id).delete();
+      }
+    });
+
+    it('should fail with invalid email format', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({ mail: 'invalid', password: 'password123' });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.error).toBe(true);
+      expect(res.body.msg).toMatch(/invalid email format/i);
+    });
+
+    it('should fail with short password', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({ mail: 'test@example.com', password: 'short' });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.error).toBe(true);
+      expect(res.body.msg).toMatch(/password must be at least/i);
+    });
+  });
+
+  describe('Login', () => {
+    it('should login successfully with correct credentials', async () => {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({
+          username: TEST_USER.mail,
+          password: TEST_USER.password
+        });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.error).toBe(false);
+      expect(res.body.msg).toMatch(/login successful/i);
+      expect(res.body.data).toHaveProperty('jwt');
+      
+      // Сохраняем токен для дальнейших тестов
+      authToken = res.body.data.jwt;
+    });
+
+    it('should fail with wrong credentials', async () => {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({
+          username: TEST_USER.mail,
+          password: 'wrongpassword'
+        });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.error).toBe(true);
+      expect(res.body.msg).toMatch(/incorrect username or password/i);
+    });
+  });
+
+  describe('Confirm Email', () => {
+    let verificationCode;
+    
+    beforeEach(async () => {
+      // Создаем код подтверждения для теста
+      const timexp = Math.floor(Date.now() / 1000) + 3600;
+      const user = await knex('users').where('mail', TEST_USER.mail).first();
+      
+      await knex('verify_codes').insert({
+        userid: user.id,
+        code: TEST_CODE,
+        expire: timexp,
+        action: 1
+      });
+    });
+    
+    afterEach(async () => {
+      await knex('verify_codes').where('code', TEST_CODE).delete();
+    });
+    
+    it('should confirm email with valid code', async () => {
+      const res = await request(app)
+        .post('/api/auth/confirm')
+        .send({ code: TEST_CODE });
+        
+      expect(res.statusCode).toBe(200);
+      expect(res.body.error).toBe(false);
+      expect(res.body.msg).toMatch(/email confirmed successfully/i);
+    });
+    
+    it('should fail with invalid code', async () => {
+      const res = await request(app)
+        .post('/api/auth/confirm')
+        .send({ code: 'INVALID' });
+        
+      expect(res.statusCode).toBe(400);
+      expect(res.body.error).toBe(true);
+      expect(res.body.msg).toMatch(/invalid or expired token/i);
+    });
+  });
+
+  describe('Forget Password', () => {
+    it('should send reset code to email', async () => {
+      const res = await request(app)
+        .post('/api/auth/forgetpass')
+        .send({ mail: TEST_USER.mail });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.error).toBe(false);
+      expect(res.body.msg).toMatch(/code for resetting password/i);
+
+      // Проверяем, что код был добавлен в БД
+      const verificationCode = await knex('verify_codes')
+        .join('users', 'verify_codes.userid', '=', 'users.id')
+        .where('users.mail', TEST_USER.mail)
+        .where('verify_codes.action', 4)
+        .first();
+        
+      expect(verificationCode).toBeTruthy();
+    });
+
+    it('should fail with invalid email', async () => {
+      const res = await request(app)
+        .post('/api/auth/forgetpass')
+        .send({ mail: 'nonexistent@example.com' });
+
+      expect(res.statusCode).toBe(404);
+      expect(res.body.error).toBe(true);
+      expect(res.body.msg).toMatch(/email not found/i);
+    });
+
+    it('should validate reset code', async () => {
+      // Получаем код из БД для тестирования
+      const verificationCode = await knex('verify_codes')
+        .join('users', 'verify_codes.userid', '=', 'users.id')
+        .where('users.mail', TEST_USER.mail)
+        .where('verify_codes.action', 4)
+        .first('verify_codes.code');
+        
+      const res = await request(app)
+        .post('/api/auth/forgetpass/validate')
+        .send({ code: verificationCode.code });
+
+      expect(res.statusCode).toBe(204);
+    });
+
+    it('should update password with valid code', async () => {
+      // Получаем код из БД для тестирования
+      const verificationCode = await knex('verify_codes')
+        .join('users', 'verify_codes.userid', '=', 'users.id')
+        .where('users.mail', TEST_USER.mail)
+        .where('verify_codes.action', 4)
+        .first('verify_codes.code');
+        
+      const newPassword = 'newpassword456';
+      
+      const res = await request(app)
+        .post('/api/auth/forgetpass/update')
+        .send({ 
+          code: verificationCode.code,
+          password: newPassword
+        });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.error).toBe(false);
+      expect(res.body.msg).toMatch(/password updated successfully/i);
+      
+      // Проверяем логин с новым паролем
+      const loginRes = await request(app)
+        .post('/api/auth/login')
+        .send({
+          username: TEST_USER.mail,
+          password: newPassword
+        });
+        
+      expect(loginRes.statusCode).toBe(200);
+      expect(loginRes.body.error).toBe(false);
+      
+      // Возвращаем изначальный пароль для других тестов
+      const user = await knex('users').where('mail', TEST_USER.mail).first();
+      const hashedPassword = await bcrypt.hash(TEST_USER.password, 10);
+      await knex('users').where('id', user.id).update({ password: hashedPassword });
+    });
+  });
+
+  describe('Logout', () => {
+    it('should logout successfully with valid token', async () => {
+      // Сначала логинимся, чтобы получить токен
+      const loginRes = await request(app)
+        .post('/api/auth/login')
+        .send({
+          username: TEST_USER.mail,
+          password: TEST_USER.password
+        });
+        
+      const token = loginRes.body.data.jwt;
+      
+      const res = await request(app)
+        .post('/api/auth/logout')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.error).toBe(false);
+      expect(res.body.message).toMatch(/logout successful/i);
+      
+      // Проверяем, что токен добавлен в черный список
+      const blacklistedToken = await knex('blacklisted_jwts')
+        .where('jwt', token)
+        .first();
+        
+      expect(blacklistedToken).toBeTruthy();
+    });
+
+    it('should fail without authorization header', async () => {
+      const res = await request(app)
+        .post('/api/auth/logout');
+        
+      expect(res.statusCode).toBe(400);
+      expect(res.body.error).toBe(true);
+      expect(res.body.msg).toMatch(/authorization header not found/i);
+    });
+  });
+
+  describe('Discord Integration', () => {
+    it('should generate auth link', async () => {
+      const res = await request(app)
+        .get('/api/auth/discord/link');
+        
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toHaveProperty('url');
+      // expect(res.body.url).toMatch(/^https:\/\/discord\.com\/oauth2\/authorize/);
+    });
+  });
+});

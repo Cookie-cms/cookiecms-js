@@ -1,49 +1,40 @@
-import mysql from '../../inc/mysql.js';
+import knex from '../../../inc/knex.js';
 
 export async function getDiscordInfo(userId) {
-    const connection = await mysql.getConnection();
-    const [[discordInfo]] = await connection.query(
-        "SELECT * FROM discord WHERE userid = ?",
-        [userId]
-    );
-    connection.release();
-    return discordInfo;
+    return await knex('discord')
+        .where('userid', userId)
+        .first();
 }
 
 export async function updateDiscordInfo(userResponse) {
-    const connection = await mysql.getConnection();
     const randomCode = Math.floor(Math.random() * 99) + 1;
     const timexp = Math.floor(Date.now() / 1000) + 3600;
 
-    await connection.query(
-        `UPDATE discord SET avatar_cache = ?, name_gb = ?, conn_id = ?, expire = ?, mail = ? WHERE userid = ?`,
-        [
-            userResponse.avatar,
-            userResponse.username,
-            randomCode,
-            timexp,
-            userResponse.email || null,
-            userResponse.id,
-        ]
-    );
-    connection.release();
+    await knex('discord')
+        .where('userid', userResponse.id)
+        .update({
+            avatar_cache: userResponse.avatar,
+            name_gb: userResponse.username,
+            conn_id: randomCode,
+            expire: timexp,
+            mail: userResponse.email || null
+        });
+
+    return { randomCode, timexp };
 }
 
 export async function insertDiscordInfo(userResponse) {
-    const connection = await mysql.getConnection();
     const randomCode = Math.floor(Math.random() * 99) + 1;
     const timexp = Math.floor(Date.now() / 1000) + 3600;
 
-    await connection.query(
-        `INSERT INTO discord (avatar_cache, name_gb, conn_id, expire, mail, userid) VALUES (?, ?, ?, ?, ?, ?)`,
-        [
-            userResponse.avatar,
-            userResponse.username,
-            randomCode,
-            timexp,
-            userResponse.email || null,
-            userResponse.id,
-        ]
-    );
-    connection.release();
+    await knex('discord').insert({
+        avatar_cache: userResponse.avatar,
+        name_gb: userResponse.username,
+        conn_id: randomCode,
+        expire: timexp,
+        mail: userResponse.email || null,
+        userid: userResponse.id
+    });
+
+    return { randomCode, timexp };
 }

@@ -1,23 +1,31 @@
-import bcrypt from 'bcrypt';
-import mysql from '../../inc/mysql.js';
-import jwt from 'jsonwebtoken';
-import readConfig from '../../inc/yamlReader.js';
+import knex from '../../inc/knex.js';
 import logger from '../../logger.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
-import { addaudit } from '../../inc/_common.js';
+import { addaudit, verifyPassword, hashPassword } from '../../inc/common.js';
+import dotenv from 'dotenv';
 
-const config = readConfig();
-const JWT_SECRET_KEY = config.securecode;
+dotenv.config();
+const JWT_SECRET_KEY = process.env.SECURE_CODE;
 
 
-async function validatePassword(connection, userId, password) {
-    const [user] = await connection.query('SELECT password FROM users WHERE id = ?', [userId]);
-    if (!user.length) {
-        throw new Error('User not found');
+async function validatePassword(userId, password) {
+    try {
+        const user = await knex('users')
+            .where('id', userId)
+            .first('password');
+            
+        if (!user || !user.password) {
+            logger.warn(`Password validation failed: User ${userId} not found or no password set`);
+            return false;
+        }
+        
+        const isValid = await verifyPassword(password, user.password);
+        return isValid;
+    } catch (error) {
+        logger.error(`Password validation error: ${error.message}`);
+        throw new Error('Password validation failed');
     }
-    return bcrypt.compare(password, user[0].password);
 }
-
 async function removediscordconn(req, res) {
     const token = req.headers['authorization']?.replace('Bearer ', '');
 
@@ -28,10 +36,8 @@ async function removediscordconn(req, res) {
         });
     }
 
-    let connection;
     try {
-        connection = await mysql.getConnection();
-        const status = await isJwtExpiredOrBlacklisted(token, connection, JWT_SECRET_KEY);
+        const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
 
         if (!status.valid) {
             return res.status(401).json({ 
@@ -51,18 +57,29 @@ async function removediscordconn(req, res) {
         }
 
         // Validate password
-        if (!await validatePassword(connection, userId, password)) {
+        if (!await validatePassword(userId, password)) {
             return res.status(401).json({ 
                 error: true, 
                 msg: 'Invalid password' 
             });
         }
 
-        const oldDiscordId = (await connection.query('SELECT dsid FROM users WHERE id = ?', [userId]))[0][0].dsid;
-        addaudit(connection, userId, 8, userId, oldDiscordId, null, 'dsid');
+        const user = await knex('users')
+            .where({ id: userId })
+            .first('dsid');
+            
+        const oldDiscordId = user?.dsid;
+        
+        // Add audit log
+        await addaudit(userId, 8, userId, oldDiscordId, null, 'dsid');
+        
         // Remove discord connection
-        await connection.query("UPDATE users SET dsid = NULL WHERE id = ?", [userId]);
+        await knex('users')
+            .where({ id: userId })
+            .update({ dsid: null });
 
+        // Remove discord connection from discord table
+        
         res.status(200).json({ 
             error: false, 
             msg: 'Discord connection removed successfully' 
@@ -74,8 +91,6 @@ async function removediscordconn(req, res) {
             error: true, 
             msg: 'Internal server error' 
         });
-    } finally {
-        if (connection) connection.release();
     }
 }
 

@@ -1,19 +1,12 @@
-import pool from '../../inc/mysql.js';
-import bcrypt from 'bcrypt';
-import { v4 as uuidv4 } from 'uuid';
-import axios from 'axios';
-import readConfig from '../../inc/yamlReader.js';
+import knex from '../../inc/knex.js';
 import logger from '../../logger.js';
-import {isJwtExpiredOrBlacklisted} from '../../inc/jwtHelper.js';
+import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import { sendVerificationEmail, sendMailUnlinkNotification } from '../../inc/mail_templates.js';
-import jwt from 'jsonwebtoken';
-import { addaudit } from '../../inc/_common.js';
+import { addaudit, verifyPassword } from '../../inc/common.js';
+import dotenv from 'dotenv';
 
-
-const config = readConfig();
-
-
-const JWT_SECRET_KEY = config.securecode;
+dotenv.config();
+const JWT_SECRET_KEY = process.env.SECURE_CODE;
 
 function validate(data) {
     data = data.trim();
@@ -21,14 +14,8 @@ function validate(data) {
     return data;
 }
 
-async function validatePassword(connection, userId, password) {
-    const [user] = await connection.query("SELECT password FROM users WHERE id = ?", [userId]);
-    return bcrypt.compare(password, user[0].password);
-}
 
 export async function changemail(req, res) {
-    const connection = await pool.getConnection();
-    
     try {
         const { mail, password } = req.body;
         logger.info(mail);
@@ -39,17 +26,26 @@ export async function changemail(req, res) {
             return res.status(400).json({ error: true, msg: "Incomplete form data provided." });
         }
 
-        if (config.demo === true) {
-            return res.status(403).json({ error: true, msg: "Registration is disabled in demo mode." });
-        }
+        // if (config.demo === true) {
+        //     return res.status(403).json({ error: true, msg: "Registration is disabled in demo mode." });
+        // }
 
         // Verify token and get user ID
-        const status = await isJwtExpiredOrBlacklisted(token, connection, JWT_SECRET_KEY);
+        const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
+        if (!status.valid) {
+            return res.status(401).json({ error: true, msg: status.message });
+        }
 
         const userId = status.data.sub;
-        // logger.info(password);  
-
         const validatedMail = validate(mail);
+
+        const user = await knex('users')
+            .where({ id: userId })
+            .first('password');
+
+        // Правильно: передаём хеш пароля из объекта user
+       
+
         
         // Validate email format
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(validatedMail)) {
@@ -57,17 +53,17 @@ export async function changemail(req, res) {
         }
 
         // Check if password is correct
-        if (!await validatePassword(connection, userId, password)) {
+        if (!await verifyPassword(password, user.password)) {
             return res.status(401).json({ error: true, msg: "Invalid password" });
         }
 
         // Check if email already exists
-        const [existingUser] = await connection.query(
-            "SELECT * FROM users WHERE BINARY mail = ? AND id != ?", 
-            [validatedMail, userId]
-        );
+        const existingUser = await knex('users')
+            .whereRaw('mail = ?', [validatedMail])
+            .andWhereNot('id', userId)
+            .first();
 
-        if (existingUser.length > 0) {
+        if (existingUser) {
             return res.status(409).json({ error: true, msg: "Email already in use" });
         }
 
@@ -83,28 +79,41 @@ export async function changemail(req, res) {
         const timexp = Math.floor(Date.now() / 1000) + 3600;
         const action = 2; // Action type for email change
 
-        const [old_mail_result] = await connection.query(
-            "SELECT mail FROM users WHERE id = ?",
-            [userId]
-        );
+        // Get old email for audit and notifications
+        const oldMailData = await knex('users')
+            .where({ id: userId })
+            .first('mail');
+            
+        const oldEmail = oldMailData.mail;
 
-        addaudit(connection, userId, 7, userId, old_mail_result[0].mail, validatedMail, 'mail');
+        // Use transaction for data consistency
+        await knex.transaction(async (trx) => {
+            // Add audit log
+            await addaudit(userId, 7, userId, oldEmail, validatedMail, 'mail');
 
-        await connection.query(
-            "INSERT INTO verify_codes (userid, code, expire, action) VALUES (?, ?, ?, ?)",
-            [userId, randomCode, timexp, action]
-        );
+            // Add verification code
+            await trx('verify_codes').insert({
+                userid: userId,
+                code: randomCode,
+                expire: timexp,
+                action: action
+            });
 
-        await connection.query(
-            "UPDATE users SET mail = ? WHERE id = ?",
-            [validatedMail, userId]
-        );
+            // Update user email
+            await trx('users')
+                .where({ id: userId })
+                .update({ mail: validatedMail });
+        });
 
         // Send verification email
-        await sendVerificationEmail(validatedMail, randomCode, randomCode);
+        if (process.env.ENV === 'production') {
+            await sendVerificationEmail(validatedMail, randomCode, randomCode);
+        }
         try {
-            logger.info(old_mail_result[0].mail)
-            await sendMailUnlinkNotification(old_mail_result[0].mail);
+            // logger.info(oldEmail);
+            if (process.env.ENV === 'production') {
+                await sendMailUnlinkNotification(oldEmail);
+            }
         } catch (error) {
             logger.error("[ERROR] Failed to send unlink notification:", error);
         }
@@ -120,8 +129,6 @@ export async function changemail(req, res) {
             error: true, 
             msg: "An error occurred while changing email" 
         });
-    } finally {
-        connection.release();
     }
 }
 

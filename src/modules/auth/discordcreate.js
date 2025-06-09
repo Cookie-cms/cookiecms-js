@@ -1,14 +1,14 @@
-import pool from '../../inc/mysql.js';
+import knex from '../../inc/knex.js';
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
-import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
-import sendEmbed from '../../inc/_common.js';
+import sendEmbed from '../../inc/common.js';
 import { generateJwtToken } from '../../inc/jwtHelper.js';
-import { addaudit } from '../../inc/_common.js';
+import { addaudit } from '../../inc/common.js';
 
-const config = readConfig();
+import dotenv from 'dotenv';
+dotenv.config();
 
 function validate(data) {
     data = data.trim();
@@ -17,41 +17,49 @@ function validate(data) {
 }
 
 export async function discordcreate(req, res) {
-    const { meta = {id, conn_id} } = req.body;
+    const { meta = {} } = req.body;
+    const { id, conn_id } = meta;
 
-    if (!meta.id || !meta.conn_id) {
+    if (!id || !conn_id) {
         return res.status(400).json({ error: true, msg: "Incomplete form data provided." });
     }
 
     try {
-        const connection = await pool.getConnection();        
-        const JWT_SECRET_KEY = config.securecode;
+        const JWT_SECRET_KEY = process.env.SECURE_CODE;
  
-        const [discord_link] = await connection.query("SELECT * FROM discord WHERE userid = ?", [meta.id]);
+        const discord_link = await knex('discord')
+            .where('userid', id)
+            .first();
 
-        if (discord_link.length === 0 || discord_link[0].conn_id !== meta.conn_id) {
-            logger.info('Discord:', discord_link[0].conn_id, 'Meta:', conn_id, 'Discord:', discord_link);
-            connection.release();
+        if (!discord_link || discord_link.conn_id !== conn_id) {
+            logger.info('Discord:', discord_link?.conn_id, 'Meta:', conn_id, 'Discord:', discord_link);
             return res.status(404).json({ error: true, msg: 'Account cannot be connected' });
         }
 
-        let result; // Declare result here
+        let userId;
 
-        if (discord_link[0].mail) {
-            [result] = await connection.query("INSERT INTO users (dsid, mail, mail_verify) VALUES (?, ?, 1)", [meta.id, discord_link[0].mail]);   
-        } else {
-            [result] = await connection.query("INSERT INTO users (dsid) VALUES (?)", [meta.id]);
-        }
-
+        // Using a transaction for data consistency
+        await knex.transaction(async (trx) => {
+            const insertData = {
+                dsid: id
+            };
+            
+            if (discord_link.mail) {
+                insertData.mail = discord_link.mail;
+                insertData.mail_verify = 1;
+            }
+            
+            // Insert new user
+            [userId] = await trx('users')
+                .insert(insertData)
+                .returning('id');
+                
+            // Add audit log entry
+            await addaudit(userId, 1, userId, null, null, null);
+        });
         
-        addaudit(connection, result.insertId, 1, result.insertId, null, null, null);
-        
-        const userId = result.insertId;
         logger.info('User ID:', userId);
-
         const token = generateJwtToken(userId, JWT_SECRET_KEY);
-
-        connection.release(); // Ensure the connection is released
 
         return res.status(200).json({ 
             error: false, 
@@ -62,7 +70,7 @@ export async function discordcreate(req, res) {
             }
         });
     } catch (err) {
-        logger.error("[ERROR] MySQL Error: ", err);
+        logger.error("[ERROR] Database Error: ", err);
         return res.status(500).json({ error: true, msg: "An error occurred during registration. Please try again later." });
     }
 }

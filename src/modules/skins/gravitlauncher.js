@@ -1,10 +1,13 @@
 import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
-import mysql from '../../inc/mysql.js';
-import readConfig from '../../inc/yamlReader.js';
+import knex from '../../inc/knex.js';
+import dotenv from 'dotenv';
+import logger from '../../logger.js';
 
-const config = readConfig();
+dotenv.config();
+
+const domain = process.env.DOMAIN;
 
 function isValidUUID(uuid) {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -22,31 +25,28 @@ async function generateFileHash(filePath) {
     }
 }
 
-async function getSkinData(userUuid) {
+export async function getSkinData(userUuid) {
     if (!isValidUUID(userUuid)) {
         throw new Error('Invalid UUID format');
     }
 
-    let connection;
     try {
-        connection = await mysql.getConnection();
-        
-        const [selectedSkin] = await connection.execute(`
-            SELECT 
-                sl.uuid,
-                sl.slim,
-                NULLIF(sl.cloak_id, '0') as cloak_id
-            FROM users u
-            JOIN skin_user su ON u.id = su.uid
-            JOIN skins_library sl ON su.skin_id = sl.uuid
-            WHERE u.uuid = ?
-        `, [userUuid]);
+        const selectedSkin = await knex('users as u')
+            .join('skin_user as su', 'u.id', '=', 'su.uid')
+            .join('skins_library as sl', 'su.skin_id', '=', 'sl.uuid')
+            .where('u.uuid', userUuid)
+            .select(
+                'sl.uuid',
+                'sl.slim',
+                knex.raw('NULLIF(sl.cloak_id, \'0\') as cloak_id')
+            )
+            .first();
 
-        if (!selectedSkin.length || !selectedSkin[0].uuid) {
+        if (!selectedSkin || !selectedSkin.uuid) {
             return null;
         }
 
-        const skinPath = path.join('uploads/skins/', `${selectedSkin[0].uuid}.png`);
+        const skinPath = path.join('uploads/skins/', `${selectedSkin.uuid}.png`);
         const skinHash = await generateFileHash(skinPath);
         
         if (!skinHash) {
@@ -55,21 +55,21 @@ async function getSkinData(userUuid) {
 
         const response = {
             SKIN: {
-                url: `${config.domain}/skins/${selectedSkin[0].uuid}.png`,
+                url: `${domain}/skins/${selectedSkin.uuid}.png`,
                 digest: skinHash
             }
         };
 
-        if (selectedSkin[0].slim) {
+        if (selectedSkin.slim) {
             response.SKIN.metadata = { model: 'slim' };
         }
         
-        if (selectedSkin[0].cloak_id) {
-            const cloakPath = path.join('uploads/capes/', `${selectedSkin[0].cloak_id}.png`);
+        if (selectedSkin.cloak_id) {
+            const cloakPath = path.join('uploads/capes/', `${selectedSkin.cloak_id}.png`);
             const cloakHash = await generateFileHash(cloakPath);
             if (cloakHash) {
                 response.CAPE = {
-                    url: `${config.domain}/cloaks/${selectedSkin[0].cloak_id}.png`,
+                    url: `${domain}/cloaks/${selectedSkin.cloak_id}.png`,
                     digest: cloakHash
                 };
             }
@@ -79,10 +79,6 @@ async function getSkinData(userUuid) {
     } catch (error) {
         logger.error('Error getting skin data:', error);
         throw error;
-    } finally {
-        if (connection) {
-            connection.release();
-        }
     }
 }
 
@@ -100,5 +96,7 @@ export async function gravitLauncherResponse(req, res) {
         res.status(500).json({ error: 'Internal server error' });
     }
 }
+
+
 
 export default gravitLauncherResponse;

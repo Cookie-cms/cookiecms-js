@@ -1,19 +1,12 @@
 import jwt from 'jsonwebtoken';
-import mysql from '../../inc/mysql.js';
-import readConfig from '../../inc/yamlReader.js';
+import knex from '../../inc/knex.js';
+import logger from '../../logger.js';
+import { isJwtExpiredOrBlacklisted, blacklistJwt } from '../../inc/jwtHelper.js';
 
-const config = readConfig(process.env.CONFIG_PATH || '../config.yml');
-const JWT_SECRET_KEY = config.securecode;
+import dotenv from 'dotenv';
 
-async function isTokenBlacklisted(connection, token) {
-    const [result] = await connection.query("SELECT * FROM blacklisted_jwts WHERE jwt = ?", [token]);
-    return result.length > 0;
-}
-
-async function blacklistToken(connection, token) {
-    await connection.query("INSERT INTO blacklisted_jwts (jwt) VALUES (?)", [token]);
-}
-
+dotenv.config();
+const JWT_SECRET_KEY = process.env.SECURE_CODE;
 async function logout(req, res) {
     const authHeader = req.headers['authorization'];
     if (!authHeader) {
@@ -23,19 +16,31 @@ async function logout(req, res) {
     const token = authHeader.replace("Bearer ", "");
 
     try {
+        // Verify JWT token
         const decoded = jwt.verify(token, JWT_SECRET_KEY);
-        const connection = await mysql.getConnection();
-
-        if (await isTokenBlacklisted(connection, token)) {
-            connection.release();
+        
+        // Check if token is already blacklisted
+        const blacklistedToken = await knex('blacklisted_jwts')
+            .where('jwt', token)
+            .first();
+            
+        if (blacklistedToken) {
             return res.status(400).json({ error: true, msg: "Token is already blacklisted" });
         }
 
-        await blacklistToken(connection, token);
-        connection.release();
+        // Get token expiration from decoded JWT
+        const expiration = decoded.exp * 1000; // Convert to milliseconds
+        
+        // Add token to blacklist
+        await knex('blacklisted_jwts')
+            .insert({
+                jwt: token,
+                expiration: expiration
+            });
 
-        res.status(200).json({ message: "Logout successful" });
+        res.status(200).json({ error: false, message: "Logout successful" });
     } catch (err) {
+        logger.error("[ERROR] Logout error:", err);
         res.status(400).json({ error: true, msg: "Invalid token" });
     }
 }

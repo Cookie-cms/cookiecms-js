@@ -1,5 +1,6 @@
 import { join } from 'path';
 import renderer from '@cookie-cms/renderer';
+import logger from '../../logger.js';
 
 export default async function renderBody(req, res) {
     try {

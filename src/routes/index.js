@@ -5,7 +5,25 @@ import skins from '../modules/skins/index.js';
 import admin from '../modules/admin/index.js';
 import service from '../modules/service/index.js';
 import UsersList from '../modules/public/users.js';
-import multer from 'multer';
+import {
+    gl_authorize,
+    gl_getByUsername,
+    gl_getByUuid,
+    gl_getByToken,
+    gl_refreshToken,
+    gl_joinServer,
+    gl_checkServer,
+    gl_getHardwareByKey,
+    gl_getHardwareByData,
+    gl_createHardware,
+    gl_connectUserHardware,
+    gl_addPublicKey,
+    gl_getHardwareById,
+    gl_getUsersByHardware,
+    gl_banHardware,
+    gl_unbanHardware
+} from '../modules/service/GravitLauncher.js';
+import {userFind} from '../modules/service/UserFind.js';
 
 const router = express.Router();
 
@@ -97,8 +115,31 @@ router.post('/service/user', (req, res) => {
 });
 
 router.get('/service/settings', service.getSettings);
-router.put('/service/settings', service.updateSettings);
+// router.put('/service/settings', service.updateSettings);
+router.post('/service/userfind', userFind);
 
+router.post('/gravit/authorize', gl_authorize);
+router.get('/gravit/getbyusername', gl_getByUsername);
+router.get('/gravit/getbyuuid', gl_getByUuid);
+router.post('/gravit/getbytoken', gl_getByToken);
+router.post('/gravit/refreshtoken', gl_refreshToken);
+router.post('/gravit/joinserver', gl_joinServer);
+router.post('/gravit/checkserver', gl_checkServer);
 
+router.post('/gravit/gethardwarebykey', gl_getHardwareByKey);
+router.post('/gravit/gethardwarebydata', gl_getHardwareByData);
+router.post('/gravit/createhardware', gl_createHardware);
+router.post('/gravit/connectuserhardware', gl_connectUserHardware);
+router.post('/gravit/addpublickey', gl_addPublicKey);
+router.post('/gravit/gethardwarebyid', gl_getHardwareById);
+router.post('/gravit/getusersbyhardware', gl_getUsersByHardware);
+router.post('/gravit/banhardware', gl_banHardware);
+router.post('/gravit/unbanhardware', gl_unbanHardware);
 
 export default router;
+
+
+
+
+
+

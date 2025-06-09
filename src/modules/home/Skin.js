@@ -1,52 +1,85 @@
-import fs from 'fs';
+import fs from 'fs/promises';
 import path from 'path';
-import mysql from '../../inc/mysql.js';
+import knex from '../../inc/knex.js';
 import jwt from 'jsonwebtoken';
-import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
+import dotenv from 'dotenv';
 
-const config = readConfig();
-const JWT_SECRET_KEY = config.securecode;
+dotenv.config();
+const JWT_SECRET_KEY = process.env.SECURE_CODE;
 
-
-async function removeSkin(connection, userId, skinId) {
-    const [skinData] = await connection.query("SELECT name FROM skins_library WHERE ownerid = ? AND uuid = ?", [userId, skinId]);
-
-    if (!skinData.length) {
-        throw new Error('Skin not found.');
+async function removeSkin(userId, skinId) {
+    // Check if skin exists and is owned by user
+    const skin = await knex('skins_library')
+        .where({
+            uuid: skinId,
+            ownerid: userId
+        })
+        .first();
+        
+    if (!skin) {
+        throw new Error('Skin not found or not owned by user');
     }
-
-    const skinFileName = skinData[0].name;
-    const targetDir = path.join('../../skins/');
-    const skinFilePath = path.join(targetDir, skinFileName);
-
-    await connection.query("DELETE FROM skins_library WHERE ownerid = ? AND uuid = ?", [userId, skinId]);
-
-    if (fs.existsSync(skinFilePath)) {
-        fs.unlinkSync(skinFilePath);
+    
+    // Use transaction for data consistency
+    await knex.transaction(async (trx) => {
+        // Remove skin selection if it's the selected skin
+        await trx('skin_user')
+            .where({
+                uid: userId,
+                skin_id: skinId
+            })
+            .delete();
+            
+        // Delete the skin
+        await trx('skins_library')
+            .where({
+                uuid: skinId,
+                ownerid: userId
+            })
+            .delete();
+    });
+    
+    // Delete the skin file if it exists
+    const skinPath = path.join('uploads/skins', `${skinId}.png`);
+    try {
+        await fs.access(skinPath);
+        await fs.unlink(skinPath);
+    } catch (error) {
+        // File doesn't exist or cannot be deleted
+        logger.warn(`Could not delete skin file: ${error.message}`);
     }
 }
 
-async function isownercape(connection, userId, capeId) {
-    const [cape] = await connection.query("SELECT uid FROM cloaks_users WHERE cloak_id = ?", [capeId]);
-
-    return cape[0].ownerid === userId;
+async function isownercape(userId, capeId) {
+    const cape = await knex('cloaks_users')
+        .where({
+            uid: userId,
+            cloak_id: capeId
+        })
+        .first();
+        
+    return !cape;
 }
 
-async function selectskin(connection, userId, skinId) {
-    const [existingSkin] = await connection.query("SELECT * FROM skin_user WHERE uid = ?", [userId]);
+async function selectskin(userId, skinId) {
+    const existingSkin = await knex('skin_user')
+        .where('uid', userId)
+        .first();
 
-    if (existingSkin.length > 0) {
-        await connection.query('UPDATE skin_user SET skin_id = ? WHERE uid = ?', [skinId, userId]);
+    if (existingSkin) {
+        await knex('skin_user')
+            .where('uid', userId)
+            .update({ skin_id: skinId });
     } else {
-        await connection.query(
-          'INSERT INTO skin_user (uid, skin_id) VALUES (?, ?)',
-          [userId, skinId]
-        );
+        await knex('skin_user')
+            .insert({
+                uid: userId,
+                skin_id: skinId
+            });
     }
 }
-
 
 async function editSkin(req, res) {
     const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
@@ -56,11 +89,9 @@ async function editSkin(req, res) {
     }
 
     try {
-        const connection = await mysql.getConnection();
-        const status = await isJwtExpiredOrBlacklisted(token, connection, JWT_SECRET_KEY);
+        const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
 
         if (!status.valid) {
-            connection.release();
             return res.status(401).json({ error: true, msg: status.message });
         }
 
@@ -68,64 +99,55 @@ async function editSkin(req, res) {
         const { skinid, name = null, slim = null, cloakid = null } = req.body;
 
         if (req.method === 'PUT') {
-            const [existingSkin] = await connection.query("SELECT uuid FROM skins_library WHERE uuid = ? AND ownerid = ?", [skinid, userId]);
+            const existingSkin = await knex('skins_library')
+                .where({
+                    uuid: skinid,
+                    ownerid: userId
+                })
+                .first();
 
-            if (!existingSkin.length) {
-                res.status(404).json({ error: true, msg: 'Cape not found' });
-                return;
+            if (!existingSkin) {
+                return res.status(404).json({ error: true, msg: 'Skin not found' });
             }
 
-            if (cloakid && await isownercape(connection, userId, cloakid)) {
-                logger.info(cloakid)
-                logger.info(await isownercape(connection, userId, cloakid))
-                res.status(403).json({ error: true, msg: 'You do not own this cape' });
-                return;
+            if (cloakid && await isownercape(userId, cloakid)) {
+                logger.info(cloakid);
+                logger.info(await isownercape(userId, cloakid));
+                return res.status(403).json({ error: true, msg: 'You do not own this cape' });
             }
 
-            let updateFields = [];
-            let params = [];
-            if (name !== null) {
-                updateFields.push("name = ?");
-                params.push(name);
-            }
-            if (slim !== null) {
-                updateFields.push("slim = ?");
-                params.push(slim);
-            }
-            if (cloakid !== null) {
-                updateFields.push("cloak_id = ?");
-                params.push(cloakid);
-            }
-            if (updateFields.length > 0) {
-                params.push(skinid, userId);
-                await connection.query(
-                    `UPDATE skins_library SET ${updateFields.join(", ")} WHERE uuid = ? AND ownerid = ?`,
-                    params
-                );
-            }
-
-
-
+            // Build update object
+            const updateData = {};
+            if (name !== null) updateData.name = name;
+            if (slim !== null) updateData.slim = slim;
+            if (cloakid !== null) updateData.cloak_id = cloakid;
             
-            // Handle skin upload/update logic here
-            // For example, you can save the skin details to the database
-            // await connection.query("INSERT INTO skin_lib (uid, id, name, slim, cloakid) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE name = ?, slim = ?, cloakid = ?", [userId, skinid, name, slim, cloakid, name, slim, cloakid]);
-            res.status(200).json({ error: false, msg: 'Skin updated successfully' });
+            if (Object.keys(updateData).length > 0) {
+                await knex('skins_library')
+                    .where({
+                        uuid: skinid,
+                        ownerid: userId
+                    })
+                    .update(updateData);
+            }
+            
+            return res.status(200).json({ error: false, msg: 'Skin updated successfully' });
+            
         } else if (req.method === 'DELETE') {
-            await removeSkin(connection, userId, skinid);
-            res.status(200).json({ error: false, msg: 'Skin deleted successfully' });
+            await removeSkin(userId, skinid);
+            return res.status(200).json({ error: false, msg: 'Skin deleted successfully' });
+            
         } else if (req.method === 'POST') {
-            await selectskin(connection, userId, skinid);
-            res.status(200).json({ error: false, msg: 'Skin updated successfully' });
-
+            await selectskin(userId, skinid);
+            return res.status(200).json({ error: false, msg: 'Skin updated successfully' });
+            
         } else {
-            res.status(400).json({ error: true, msg: 'Invalid request method' });
+            return res.status(400).json({ error: true, msg: 'Invalid request method' });
         }
 
-        connection.release();
     } catch (err) {
-        logger.error("[ERROR] MySQL Error: ", err);
-        res.status(500).json({ error: true, msg: 'Internal Server Error: ' + err.message });
+        logger.error("[ERROR] Database Error: ", err);
+        return res.status(500).json({ error: true, msg: 'Internal Server Error: ' + err.message });
     }
 }
 

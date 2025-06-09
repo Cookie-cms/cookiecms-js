@@ -1,12 +1,12 @@
-import mysql from '../../inc/mysql.js';
-import readConfig from '../../inc/yamlReader.js';
+import knex from '../../inc/knex.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
-import { checkPermission,addNewTask } from '../../inc/_common.js';
+import { checkPermission, addNewTask } from '../../inc/common.js';
 import logger from '../../logger.js';
 
-const config = readConfig();
-const JWT_SECRET_KEY = config.securecode;
+import dotenv from 'dotenv';
 
+dotenv.config();
+const JWT_SECRET_KEY = process.env.SECURE_CODE;
 
 async function skins(req, res) {
     const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
@@ -16,28 +16,21 @@ async function skins(req, res) {
     }
 
     try {
-        const connection = await mysql.getConnection();
-        
-        const status = await isJwtExpiredOrBlacklisted(token, connection, JWT_SECRET_KEY);
+        const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
         
         if (!status.valid) {
-            connection.release();
             return res.status(401).json({ error: true, msg: status.message, code: 401 });
         }
 
-        if (!await checkPermission(connection, status.data.sub, 'admin.useredit')) {
-            connection.release();
-            return res.status(403).json({ error: 'Insufficient permissions' });
+        if (!await checkPermission(status.data.sub, 'admin.useredit')) {
+            return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
         }
        
-        const [result] = await connection.execute(
-            'SELECT COUNT(*) as skinCount FROM skins_library'
-        );
+        const [result] = await knex('skins_library')
+            .count('* as skinCount');
 
-        const skinCount = result[0].skinCount;
+        const skinCount = result.skinCount;
 
-// Return the count in your response
-        connection.release();
         return res.status(200).json({
             error: false,
             data: {
@@ -45,11 +38,11 @@ async function skins(req, res) {
             }
         });
     } catch (error) {
-        logger.error('Error retrieving settings:', error);
-        return res.status(500).json({ error: true, msg: "Failed to retrieve settings" });
+        logger.error('Error retrieving skin count:', error);
+        return res.status(500).json({ error: true, msg: "Failed to retrieve skin count" });
     }
-    
 }
+
 async function allusers(req, res) {
     const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
     
@@ -58,41 +51,32 @@ async function allusers(req, res) {
     }
 
     try {
-        const connection = await mysql.getConnection();
-        
-        const status = await isJwtExpiredOrBlacklisted(token, connection, JWT_SECRET_KEY);
+        const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
         
         if (!status.valid) {
-            connection.release();
             return res.status(401).json({ error: true, msg: status.message, code: 401 });
         }
 
-        if (!await checkPermission(connection, status.data.sub, 'admin.useredit')) {
-            connection.release();
-            return res.status(403).json({ error: 'Insufficient permissions' });
+        if (!await checkPermission(status.data.sub, 'admin.useredit')) {
+            return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
         }
        
-        const [result] = await connection.execute(
-            'SELECT COUNT(*) as users FROM users'
-        );
+        const [result] = await knex('users')
+            .count('* as users');
 
-        const users = result[0].users;
+        const users = result.users;
 
-// Return the count in your response
-        connection.release();
         return res.status(200).json({
             error: false,
             data: {
-                totalSkins: users
+                totalUsers: users
             }
         });
     } catch (error) {
-        logger.error('Error retrieving settings:', error);
-        return res.status(500).json({ error: true, msg: "Failed to retrieve settings" });
+        logger.error('Error retrieving user count:', error);
+        return res.status(500).json({ error: true, msg: "Failed to retrieve user count" });
     }
-
 }
-
 
 async function userRegistrationStats(req, res) {
     const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
@@ -102,18 +86,14 @@ async function userRegistrationStats(req, res) {
     }
 
     try {
-        const connection = await mysql.getConnection();
-        
-        const status = await isJwtExpiredOrBlacklisted(token, connection, JWT_SECRET_KEY);
+        const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
         
         if (!status.valid) {
-            connection.release();
             return res.status(401).json({ error: true, msg: status.message, code: 401 });
         }
 
-        if (!await checkPermission(connection, status.data.sub, 'admin.useredit')) {
-            connection.release();
-            return res.status(403).json({ error: 'Insufficient permissions' });
+        if (!await checkPermission(status.data.sub, 'admin.useredit')) {
+            return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
         }
         
         // Placeholder approach - hardcode data that matches your example
@@ -136,7 +116,6 @@ async function userRegistrationStats(req, res) {
             });
         }
         
-        connection.release();
         return res.status(200).json({
             error: false,
             data: {
@@ -151,6 +130,7 @@ async function userRegistrationStats(req, res) {
         });
     }
 }
+
 // Helper function to fill in dates with no registrations
 function fillMissingDates(results, days) {
     const statistics = [];

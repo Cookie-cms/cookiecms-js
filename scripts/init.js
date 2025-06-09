@@ -6,7 +6,7 @@ import crypto from 'crypto';
 
 const configPath = path.join(__dirname, '../src/config.yml');
 
-function generateSecureCode(length = 64) {
+function generateSECURE_CODE(length = 64) {
     return crypto.randomBytes(length).toString('hex').slice(0, length);
 }
 
@@ -175,8 +175,8 @@ async function initConfig() {
 
     const config = {
         NameSite: answers.NameSite,
-        securecode: generateSecureCode(),
-        ServiceApiToken: generateSecureCode(),
+        SECURE_CODE: generateSECURE_CODE(),
+        ServiceApiToken: generateSECURE_CODE(),
         MaxSavedSkins: answers.MaxSavedSkins,
         domain: answers.domain,
         production: answers.production,

@@ -1,0 +1,161 @@
+import request from 'supertest';
+import app from '../src/app'; // твой Express app
+
+const jwt_token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjIsImlhdCI6MTc0OTQ2NjgxMSwiZXhwIjoxNzQ5NDcwNDExfQ.Rtjo3nFLNhMdyaOkpvV-xxnkZkAXfCUOUnTK8X8ObPU';
+const testUserId = '1';
+const testCapeId = 'b050e570-1e40-44c8-92cc-44f968d601ad';
+
+describe('Admin API Endpoints', () => {
+  it('GET /api/admin/users', async () => {
+    const res = await request(app)
+      .get('/api/admin/users')
+      .set('Authorization', `Bearer ${jwt_token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.error).toBe(false);
+    expect(Array.isArray(res.body.data)).toBe(true);
+  });
+
+  it('GET /api/admin/user/:identifier', async () => {
+    const res = await request(app)
+      .get(`/api/admin/user/${testUserId}`)
+      .set('Authorization', `Bearer ${jwt_token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.error).toBe(false);
+    expect(res.body.data).toHaveProperty('Username');
+  });
+
+  it('PATCH /api/admin/user/:identifier', async () => {
+    const res = await request(app)
+      .patch(`/api/admin/user/${testUserId}`)
+      .set('Authorization', `Bearer ${jwt_token}`)
+      .send({
+        username: 'updatedUser',
+        mail: 'updated@mail.com',
+        mail_verify: true,
+        selected_skin: 'skin-id',
+        password: 'new-password',
+        perms: 2,
+        dsid: true,
+        mail_verification: true
+      });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.error).toBe(false);
+  });
+
+  it('PATCH /api/admin/skin/:uuid', async () => {
+    const res = await request(app)
+      .patch(`/api/admin/skin/${testUserId}`)
+      .set('Authorization', `Bearer ${jwt_token}`)
+      .send({
+        name: 'New Skin Name',
+        slim: false,
+        hd: true,
+        cloakid: 'cloak-id'
+      });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.error).toBe(false);
+  });
+
+  it('POST /api/admin/mail', async () => {
+    const res = await request(app)
+      .post('/api/admin/mail')
+      .set('Authorization', `Bearer ${jwt_token}`)
+      .send({
+        subject: 'Test Subject',
+        message: 'This is a test email to all users.'
+      });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.msg).toMatch(/Email sent successfully/);
+  });
+
+  it('POST /api/admin/user/role/:identifier', async () => {
+    const res = await request(app)
+      .post(`/api/admin/user/role/${testUserId}`)
+      .set('Authorization', `Bearer ${jwt_token}`)
+      .send({
+        user: 1,
+        role_level: 2,
+        expired_at: Math.floor(Date.now() / 1000) + 3600
+      });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.error).toBe(false);
+  });
+
+  it('POST /api/admin/user/cape/:identifier', async () => {
+    const res = await request(app)
+      .post(`/api/admin/user/cape/${testUserId}`)
+      .set('Authorization', `Bearer ${jwt_token}`)
+      .send({
+        user: 1,
+        cape: ['cape-id']
+      });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.error).toBe(false);
+  });
+
+  it('POST /api/admin/user/cape/upload', async () => {
+    const res = await request(app)
+      .post('/api/admin/user/cape/upload')
+      .set('Authorization', `Bearer ${jwt_token}`)
+      .attach('cape', '__tests__/testcape.png') // Помести изображение в эту папку
+      .field('name', 'Test Cape')
+      .field('owners', JSON.stringify([1]));
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.error).toBe(false);
+  });
+
+  it('DELETE /api/admin/user/cape/upload', async () => {
+    const res = await request(app)
+      .delete('/api/admin/user/cape/upload')
+      .set('Authorization', `Bearer ${jwt_token}`)
+      .send({ capeid: testCapeId });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.error).toBe(false);
+  });
+
+  it('GET /api/admin/users/skin/:uuid', async () => {
+    const res = await request(app)
+      .get(`/api/admin/users/skin/${testUserId}`)
+      .set('Authorization', `Bearer ${jwt_token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.error).toBe(false);
+    expect(Array.isArray(res.body.data)).toBe(true);
+  });
+
+  it('GET /api/admin/audit', async () => {
+    const res = await request(app)
+      .get('/api/admin/audit')
+      .set('Authorization', `Bearer ${jwt_token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(Array.isArray(res.body.data)).toBe(true);
+  });
+
+  it('GET /api/admin/skins', async () => {
+    const res = await request(app)
+      .get('/api/admin/skins')
+      .set('Authorization', `Bearer ${jwt_token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(Array.isArray(res.body.data)).toBe(true);
+  });
+
+  it('GET /api/admin/allcapes', async () => {
+    const res = await request(app)
+      .get('/api/admin/allcapes')
+      .set('Authorization', `Bearer ${jwt_token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(Array.isArray(res.body.data)).toBe(true);
+  });
+});

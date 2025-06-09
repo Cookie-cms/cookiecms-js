@@ -1,16 +1,16 @@
 import bcrypt from 'bcrypt';
-import createResponse from '../../inc/_common.js';
-import mysql from '../../inc/mysql.js';
-import readConfig from '../../inc/yamlReader.js';
-import addaudit from '../../inc/_common.js';
+import { createResponse, addaudit } from '../../inc/common.js';
+import knex from '../../inc/knex.js';
 import logger from '../../logger.js';
 
-const config = readConfig();
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 async function updatepass(req, res) {
     const { code, password } = req.body;
 
-    if (config.production = "demo") {
+    if (process.env.ENV === "demo") {
         return res.status(403).json(createResponse(true, 'Password reset is disabled in demo mode.'));
     }
     if (!code || !password) {
@@ -18,52 +18,54 @@ async function updatepass(req, res) {
     }
 
     try {
-        const connection = await mysql.getConnection();
+        // Using knex transaction to ensure data consistency
+        await knex.transaction(async (trx) => {
+            const codeData = await trx('verify_codes')
+                .join('users', 'verify_codes.userid', '=', 'users.id')
+                .where('verify_codes.code', code)
+                .first('verify_codes.userid', 'verify_codes.expire');
 
-        const [result] = await connection.query(`
-            SELECT vc.userid, vc.expire
-            FROM verify_codes vc 
-            JOIN users u ON vc.userid = u.id 
-            WHERE vc.code = ?
-        `, [code]);
+            if (!codeData) {
+                throw new Error('Invalid or expired token');
+            }
 
-        if (result.length === 0) {
-            connection.release();
-            return res.status(400).json(createResponse(true, 'Invalid or expired token'));
-        }
+            // Check if the token is expired
+            const currentTime = Math.floor(Date.now() / 1000);
+            if (currentTime > codeData.expire) {
+                // Delete the expired verification code
+                await trx('verify_codes')
+                    .where('code', code)
+                    .delete();
+                    
+                throw new Error(`Token has expired. Current time: ${new Date(currentTime * 1000)} Expire time: ${new Date(codeData.expire * 1000)}`);
+            }
 
-        const codeData = result[0];
+            // Hash the new password
+            const saltRounds = 10;
+            const hashedPassword = await bcrypt.hash(password, saltRounds);
+            
+            // Add audit log entry
+            await addaudit(codeData.userid, 2, codeData.userid, null, null, null);
+            
+            // Update the user's password
+            await trx('users')
+                .where('id', codeData.userid)
+                .update({ password: hashedPassword });
 
-        // Check if the token is expired
-        const currentTime = new Date();
-        const expireTime = new Date(codeData.expire * 1000); // Convert Unix timestamp to milliseconds
+            // Delete the verification code
+            await trx('verify_codes')
+                .where('code', code)
+                .delete();
+        });
 
-        if (expireTime < currentTime) {
-            const query = "DELETE FROM verify_codes WHERE code = ?";
-            await connection.query(query, [code]);
-
-            connection.release();
-            return res.status(400).json(createResponse(true, `Token has expired. Current time: ${currentTime} Expire time: ${expireTime}`));
-        }
-
-        // Hash the new password
-        const saltRounds = 10;
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
-        addaudit(connection, codeData.userid, 2, codeData.userid, null, null, null);
-        // Update the user's password in the database
-        await connection.query(`
-            UPDATE users SET password = ? WHERE id = ?
-        `, [hashedPassword, codeData.userid]);
-
-        // Delete the verification code
-        await connection.query(`
-            DELETE FROM verify_codes WHERE code = ?
-        `, [code]);
-
-        connection.release();
         return res.status(200).json(createResponse(false, 'Password updated successfully'));
     } catch (err) {
-        logger.error("[ERROR] MySQL Error: ", err);
+        logger.error("[ERROR] Database Error: ", err);
+        
+        if (err.message.includes('Invalid or expired token') || err.message.includes('Token has expired')) {
+            return res.status(400).json(createResponse(true, err.message));
+        }
+        
         return res.status(500).json(createResponse(true, 'Database Error'));
     }
 }

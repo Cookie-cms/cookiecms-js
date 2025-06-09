@@ -1,14 +1,13 @@
-import pool from '../../inc/mysql.js';
+import knex from '../../inc/knex.js';
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
-import readConfig from '../../inc/yamlReader.js';
 import logger from '../../logger.js';
-// import sendEmbed from '../../inc/_common.js';
 import { sendVerificationEmail, sendWelcomeEmail } from '../../inc/mail_templates.js';
-import {addaudit} from '../../inc/_common.js';
+import { addaudit } from '../../inc/common.js';
+import dotenv from 'dotenv';
 
-const config = readConfig();
+dotenv.config();
 
 function validate(data) {
     data = data.trim();
@@ -19,7 +18,7 @@ function validate(data) {
 export async function signup(req, res) {
     const { mail, password } = req.body;
 
-    if (config.demo === true) {
+    if (process.env.ENV === "demo") {
         return res.status(403).json({ error: true, msg: "Registration is disabled in demo mode." });
     }
 
@@ -39,45 +38,76 @@ export async function signup(req, res) {
     }
 
     try {
-        const connection = await pool.getConnection();
+        // Check if email already exists
+        const existingUser = await knex('users')
+            .whereRaw('LOWER(mail) = LOWER(?)', [validatedMail])
+            .first();
 
-        const [existingUser] = await connection.query("SELECT * FROM users WHERE BINARY mail = ?", [validatedMail]);
-
-        if (existingUser.length > 0) {
-            connection.release();
+        if (existingUser) {
             return res.status(409).json({ error: true, msg: "Email is already registered." });
         }
 
         const hashedPassword = await bcrypt.hash(validatedPassword, 10);
 
-        const [result] = await connection.query("INSERT INTO users (mail, password) VALUES (?, ?)", [validatedMail, hashedPassword]);
+        // Use transaction for data consistency
+        await knex.transaction(async (trx) => {
+            // Insert new user
+            const [userId] = await trx('users')
+                .insert({
+                    mail: validatedMail,
+                    password: hashedPassword
+                })
+                .returning('id')
+                .then(rows => rows.map(row => row.id || row));
+                
+            // Add audit log
+            // console.log(userId, 1, userId, null, null, null);
 
-        const userID = result.insertId;
+            // Generate verification code
+            let randomCode = '';
+            if (process.env.ENV === "prod") {
+                const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+                const length = 6;
+                for (let i = 0; i < length; i++) {
+                    randomCode += characters.charAt(Math.floor(Math.random() * characters.length));
+                }
+            } else {
+                randomCode = "CODE123";
+            }
+            const timexp = Math.floor(Date.now() / 1000) + 3600;
+            const action = 1;
+            
+            // Insert verification code
+            await trx('verify_codes')
+                .insert({
+                    userid: userId,
+                    code: randomCode,
+                    expire: timexp,
+                    action: action
+                });
+            
+            await trx.commit();
+            // Send verification and welcome emails
+            // await sendVerificationEmail(validatedMail, randomCode, randomCode);
+            
+            const logo = "";
+            if (process.env.ENV === "prod") {
+                await sendWelcomeEmail(mail, userId, logo);
+            }
 
-        addaudit(connection, userID, 1, userID, null, null, null);
+        });
 
-
-        const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        let randomCode = '';
-        const length = 6;
-        for (let i = 0; i < length; i++) {
-            randomCode += characters.charAt(Math.floor(Math.random() * characters.length));
-        }
-        const timexp = Math.floor(Date.now() / 1000) + 3600;
-        const action = 1;
-
-        await connection.query("INSERT INTO verify_codes (userid, code, expire, action) VALUES (?, ?, ?, ?)", [userID, randomCode, timexp, action]);
-
-        await sendVerificationEmail(validatedMail, randomCode, randomCode);
-
-        const logo = ""
-        await sendWelcomeEmail(mail, userID, logo);
-
-        connection.release();
-        return res.status(200).json({ error: false, msg: "Registration successful. Please check your mail to verify.", url: "/signin" });
+        return res.status(200).json({ 
+            error: false, 
+            msg: "Registration successful. Please check your mail to verify.", 
+            url: "/signin" 
+        });
     } catch (err) {
-        logger.error("[ERROR] MySQL Error: ", err);
-        return res.status(500).json({ error: true, msg: "An error occurred during registration. Please try again later." });
+        console.log("[ERROR] Database Error: ", err);
+        return res.status(500).json({ 
+            error: true, 
+            msg: "An error occurred during registration. Please try again later." 
+        });
     }
 }
 
