@@ -2,7 +2,7 @@ import app from './app.js';
 import logger from './logger.js';
 import knex from './inc/knex.js';
 
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {
     logger.info(`Server is running on port http://localhost:${PORT}`);
 });

@@ -93,10 +93,10 @@ export function up(knex) {
     }),
 
     // User Permissions
-    knex.schema.createTable('user_permissions', table => {
-      table.string('uuid', 100).notNullable();
-      table.string('name', 100).notNullable();
-    }),
+    // knex.schema.createTable('user_permissions', table => {
+    //   table.string('uuid', 100).notNullable();
+    //   table.string('name', 100).notNullable();
+    // }),
 
     // Verify Codes
     knex.schema.createTable('verify_codes', table => {

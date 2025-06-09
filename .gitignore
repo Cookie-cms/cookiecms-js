@@ -8,7 +8,7 @@ src/config.yml
 src/config.backup.yml
 .env.local
 .env.development.local
-
+.npmrc
 uploads/*
 
 

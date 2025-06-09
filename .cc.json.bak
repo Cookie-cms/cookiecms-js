@@ -1,8 +1,0 @@
-{
-    "type": "postgres",
-    "host": "localhost",
-    "username": "cookiecms",
-    "pass": "cookiecms",
-    "db": "cookiecms",
-    "port": 5432
-}
