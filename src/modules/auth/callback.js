@@ -3,7 +3,6 @@ import jwt from 'jsonwebtoken';
 import knex from '../../inc/knex.js';
 import logger from '../../logger.js';
 import { createResponse, addaudit } from '../../inc/common.js';
-import readConfig from '../../inc/yamlReader.js.bak/index.js';
 
 import dotenv from 'dotenv';
 

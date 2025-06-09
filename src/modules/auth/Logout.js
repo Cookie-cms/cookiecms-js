@@ -6,7 +6,7 @@ import { isJwtExpiredOrBlacklisted, blacklistJwt } from '../../inc/jwtHelper.js'
 import dotenv from 'dotenv';
 
 dotenv.config();
-const JWT_SECRET_KEY = process.env.securecode;
+const JWT_SECRET_KEY = process.env.SECURE_CODE;
 async function logout(req, res) {
     const authHeader = req.headers['authorization'];
     if (!authHeader) {

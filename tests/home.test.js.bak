@@ -1,0 +1,59 @@
+import request from 'supertest';
+import app from '../src/app'; // твой Express app
+
+const jwtToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJjb29raWVjbXMiLCJzdWIiOjMsImlhdCI6MTc0OTQ2Nzg2MCwiZXhwIjoxNzQ5NDcxNDYwfQ.2AlBSP_9RvAASfU7NiNiQRgl7Chehk2quT3TkX4W138';
+
+describe('Home Page API', () => {
+  it('GET /api/home - success', async () => {
+    const res = await request(app)
+      .get('/api/home')
+      .set('Authorization', `Bearer ${jwtToken}`);
+
+    expect(res.statusCode).toEqual(200);
+    expect(res.body).toHaveProperty('error', false);
+    expect(res.body.data).toHaveProperty('Username');
+  });
+
+  it('PUT /api/home/edit/username - success', async () => {
+    const res = await request(app)
+      .put('/api/home/edit/username')
+      .set('Authorization', `Bearer ${jwtToken}`)
+      .send({
+        username: 'test',
+        password: 'test',
+      });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.msg).toContain('successfully');
+  });
+
+  it('PATCH /api/home/edit/password - failure on missing fields', async () => {
+    const res = await request(app)
+      .put('/api/home/edit/password')
+      .set('Authorization', `Bearer ${jwtToken}`)
+      .send({ password: 'current_password' }); // missing newpassword
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toBe(true);
+  });
+
+  it('POST /api/home/edit/removediscord - success', async () => {
+    const res = await request(app)
+      .post('/api/home/edit/removediscord')
+      .set('Authorization', `Bearer ${jwtToken}`)
+      .send({ password: 'test' });
+
+    expect([200, 204]).toContain(res.statusCode);
+  });
+
+  it('POST /api/home/upload - upload skin file', async () => {
+    const res = await request(app)
+      .post('/api/home/upload')
+      .set('Authorization', `Bearer ${jwtToken}`)
+      .field('slim', 'true')
+      .attach('skin', 'tests/skin.png');
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.msg).toBe('Skin uploaded successfully');
+  });
+});

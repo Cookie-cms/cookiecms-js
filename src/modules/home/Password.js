@@ -1,43 +1,57 @@
 import knex from '../../inc/knex.js';
-import bcrypt from 'bcrypt';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import logger from '../../logger.js';
-import { addaudit } from '../../inc/common.js';
+import { addaudit, verifyPassword, hashPassword } from '../../inc/common.js';
 
 import dotenv from 'dotenv';
 
 dotenv.config();
-const JWT_SECRET_KEY = process.env.securecode;
+const JWT_SECRET_KEY = process.env.SECURE_CODE;
 
 async function validatePassword(userId, password) {
-    const user = await knex('users')
-        .where('id', userId)
-        .first('password');
+    try {
+        const user = await knex('users')
+            .where('id', userId)
+            .first('password');
+            
+        if (!user || !user.password) {
+            logger.warn(`Password validation failed: User ${userId} not found or no password set`);
+            return false;
+        }
         
-    if (!user) return false;
-    
-    return bcrypt.compare(password, user.password);
+        const isValid = await verifyPassword(password, user.password);
+        return isValid;
+    } catch (error) {
+        logger.error(`Password validation error: ${error.message}`);
+        throw new Error('Password validation failed');
+    }
 }
 
 async function updatePassword(userId, currentPassword, newPassword) {
-    // Validate current password
-    if (!await validatePassword(userId, currentPassword)) {
-        throw new Error('Current password is incorrect');
+    try {
+        // Validate current password
+        const isValidPassword = await validatePassword(userId, currentPassword);
+        
+        if (!isValidPassword) {
+            return { success: false, message: 'Current password is incorrect' };
+        }
+
+        // Hash the new password
+        const hashedPassword = await hashPassword(newPassword);
+        // Update password and add audit
+        await knex.transaction(async (trx) => {
+            await trx('users')
+                .where('id', userId)
+                .update({ password: hashedPassword });
+                
+            await addaudit(userId, 6, userId, null, '[REDACTED]', 'password');
+        });
+
+        return { success: true, message: 'Password updated successfully' };
+    } catch (error) {
+        logger.error(`Password update error: ${error.message}`);
+        throw new Error('Failed to update password');
     }
-
-    // Hash the new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    // Update password and add audit
-    await knex.transaction(async (trx) => {
-        await trx('users')
-            .where('id', userId)
-            .update({ password: hashedPassword });
-            
-        await addaudit(userId, 6, userId, null, '[REDACTED]', 'password');
-    });
-
-    return true;
 }
 
 async function editPassword(req, res) {
@@ -57,15 +71,26 @@ async function editPassword(req, res) {
         const userId = status.data.sub;
         const { currentPassword, newPassword } = req.body;
 
-        if (currentPassword && newPassword) {
-            await updatePassword(userId, currentPassword, newPassword);
-            res.status(200).json({ error: false, msg: 'Password updated successfully' });
+        // Проверяем наличие всех необходимых полей
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ error: true, msg: 'Missing required fields for changing password' });
+        }
+
+        // Проверяем минимальную длину нового пароля
+        if (newPassword.length < 8) {
+            return res.status(400).json({ error: true, msg: 'New password must be at least 8 characters long' });
+        }
+
+        const result = await updatePassword(userId, currentPassword, newPassword);
+        
+        if (result.success) {
+            res.status(200).json({ error: false, msg: result.message });
         } else {
-            res.status(400).json({ error: true, msg: 'Missing required fields for changing password' });
+            res.status(400).json({ error: true, msg: result.message });
         }
     } catch (err) {
-        logger.error("[ERROR] Database Error: ", err);
-        res.status(500).json({ error: true, msg: 'Internal Server Error: ' + err.message });
+        logger.error(`[ERROR] Password Change Error: ${err.message}`);
+        res.status(500).json({ error: true, msg: 'Internal Server Error' });
     }
 }
 

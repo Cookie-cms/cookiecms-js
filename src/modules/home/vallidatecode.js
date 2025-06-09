@@ -1,6 +1,6 @@
 import knex from '../../inc/knex.js';
 // import readConfig from '../../inc/yamlReader.js';
-import bcrypt from 'bcrypt';
+import { addaudit, verifyPassword, hashPassword } from '../../inc/common.js';
 import logger from '../../logger.js';
 
 // const config = readConfig();
@@ -14,7 +14,7 @@ async function validate_password(userId, password) {
     if (!user) {
         throw new Error('User not found');
     }
-    return bcrypt.compare(password, user.password);
+    return verifyPassword(password, user.password);
 }
 
 async function validatecode(req, res) {

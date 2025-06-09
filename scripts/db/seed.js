@@ -1,4 +1,5 @@
 import inquirer from 'inquirer';
+import knexConfig from '../../knexfile.js';
 import knex from 'knex';
 import fs from 'fs/promises';
 import bcrypt from 'bcrypt';
@@ -6,10 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 import path from 'path';
 
-async function getConnectionData() {
-  const data = await fs.readFile("./.cc.json", "utf8");
-  return JSON.parse(data);
-}
+const db = knex(knexConfig);
 
 async function downloadFile(url, folder, filename) {
   try {
@@ -34,26 +32,11 @@ async function askQuestions() {
     { type: 'input', name: 'discord_id', message: 'Please write your discord ID (can be null): ', default: null },
     { type: 'confirm', name: 'isAdmin', message: 'Do you want to grant admin privileges to this user?', default: true },
   ]);
-
   return answers;
 }
 
 async function seedDB() {
   try {
-    const conn_data = await getConnectionData();
-    console.log('Connection data:', conn_data);
-    
-    const db = knex({
-      client: conn_data.type || 'mysql2',
-      connection: {
-        host: conn_data.host,
-        user: conn_data.username,
-        password: conn_data.pass,
-        database: conn_data.db,
-        port: conn_data.port
-      }
-    });
-
     // Get user input
     const { username, password, email, discord_id, isAdmin } = await askQuestions();
 
@@ -61,47 +44,26 @@ async function seedDB() {
     const hashedPassword = await bcrypt.hash(password, 10);
     const user_uuid = uuidv4();
 
-    // Insert user with different approach based on database type
-    let userId;
-    
-    if (conn_data.type === 'pg') {
-      // PostgreSQL - используем returning и получаем значение напрямую из поля id
-      const rows = await db('users')
-        .insert({
-          username, 
-          password: hashedPassword,
-          mail: email,
-          dsid: discord_id,
-          mail_verify: 1,
-          uuid: user_uuid,
-          perms: isAdmin ? 1 : 3
-        })
-        .returning('id');
-        
-      userId = rows[0].id;
-      console.log('PostgreSQL returning rows:', rows);
-    } else {
-      // MySQL
-      const result = await db('users')
-        .insert({
-          username, 
-          password: hashedPassword,
-          mail: email,
-          dsid: discord_id,
-          mail_verify: 1,
-          uuid: user_uuid,
-          perms: isAdmin ? 1 : 3
-        });
-      
-      userId = result[0];
-    }
+    // Insert user and get ID (PostgreSQL)
+    const rows = await db('users')
+      .insert({
+        username,
+        password: hashedPassword,
+        mail: email,
+        dsid: discord_id,
+        mail_verify: 1,
+        uuid: user_uuid,
+        perms: isAdmin ? 1 : 3
+      })
+      .returning('id');
+    const userId = rows[0].id ?? rows[0]; // для разных версий knex/pg
 
     if (!userId) {
       throw new Error('Failed to get user ID after insertion');
     }
 
     console.info('User created with ID:', userId);
-    
+
     // Create UUIDs for skins and cloaks
     const skinId = uuidv4();
     const cloakIdOne = uuidv4();
@@ -134,7 +96,7 @@ async function seedDB() {
       { uuid: cloakIdTwo, name: 'Rare Cloak' }
     ]);
 
-    // Assign cloak to user - explicitly specify all column values
+    // Assign cloak to user
     await db('cloaks_users').insert({
       uid: userId,
       cloak_id: cloakIdOne
@@ -161,7 +123,7 @@ async function seedDB() {
     const time = Math.floor(Date.now() / 1000);
     await db('audit_log').insert({
       iss: userId,
-      action: 1, // Числовой тип
+      action: 1,
       target_id: userId,
       field_changed: 'users',
       time: time
@@ -169,7 +131,7 @@ async function seedDB() {
 
     console.info('User, skin, and cloaks added successfully.');
     await db.destroy();
-    
+
   } catch (error) {
     console.error('Error:', error);
     console.error('Stack trace:', error.stack);

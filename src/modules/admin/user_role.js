@@ -6,7 +6,7 @@ import logger from '../../logger.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
-const JWT_SECRET_KEY = process.env.securecode;
+const JWT_SECRET_KEY = process.env.SECURE_CODE;
 
 export async function user_role(req, res) {
     const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';

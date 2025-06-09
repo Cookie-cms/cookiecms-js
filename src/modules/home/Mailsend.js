@@ -1,13 +1,12 @@
 import knex from '../../inc/knex.js';
-import bcrypt from 'bcrypt';
 import logger from '../../logger.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import { sendVerificationEmail, sendMailUnlinkNotification } from '../../inc/mail_templates.js';
-import { addaudit } from '../../inc/common.js';
+import { addaudit, verifyPassword } from '../../inc/common.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
-const JWT_SECRET_KEY = process.env.securecode;
+const JWT_SECRET_KEY = process.env.SECURE_CODE;
 
 function validate(data) {
     data = data.trim();
@@ -15,15 +14,6 @@ function validate(data) {
     return data;
 }
 
-async function validatePassword(userId, password) {
-    const user = await knex('users')
-        .where({ id: userId })
-        .first('password');
-        
-    if (!user) return false;
-    
-    return bcrypt.compare(password, user.password);
-}
 
 export async function changemail(req, res) {
     try {
@@ -36,9 +26,9 @@ export async function changemail(req, res) {
             return res.status(400).json({ error: true, msg: "Incomplete form data provided." });
         }
 
-        if (config.demo === true) {
-            return res.status(403).json({ error: true, msg: "Registration is disabled in demo mode." });
-        }
+        // if (config.demo === true) {
+        //     return res.status(403).json({ error: true, msg: "Registration is disabled in demo mode." });
+        // }
 
         // Verify token and get user ID
         const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
@@ -48,6 +38,14 @@ export async function changemail(req, res) {
 
         const userId = status.data.sub;
         const validatedMail = validate(mail);
+
+        const user = await knex('users')
+            .where({ id: userId })
+            .first('password');
+
+        // Правильно: передаём хеш пароля из объекта user
+       
+
         
         // Validate email format
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(validatedMail)) {
@@ -55,13 +53,13 @@ export async function changemail(req, res) {
         }
 
         // Check if password is correct
-        if (!await validatePassword(userId, password)) {
+        if (!await verifyPassword(password, user.password)) {
             return res.status(401).json({ error: true, msg: "Invalid password" });
         }
 
         // Check if email already exists
         const existingUser = await knex('users')
-            .whereRaw('BINARY mail = ?', [validatedMail])
+            .whereRaw('mail = ?', [validatedMail])
             .andWhereNot('id', userId)
             .first();
 
@@ -108,10 +106,14 @@ export async function changemail(req, res) {
         });
 
         // Send verification email
-        await sendVerificationEmail(validatedMail, randomCode, randomCode);
+        if (process.env.ENV === 'production') {
+            await sendVerificationEmail(validatedMail, randomCode, randomCode);
+        }
         try {
-            logger.info(oldEmail);
-            await sendMailUnlinkNotification(oldEmail);
+            // logger.info(oldEmail);
+            if (process.env.ENV === 'production') {
+                await sendMailUnlinkNotification(oldEmail);
+            }
         } catch (error) {
             logger.error("[ERROR] Failed to send unlink notification:", error);
         }

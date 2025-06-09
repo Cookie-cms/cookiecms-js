@@ -120,25 +120,69 @@ export async function addaudit(iss, action, forId, oldValue = null, newValue = n
 export async function checkPermission(userId, permission) {
     if (!userId || !permission) return false;
     
-    const userPerms = await knex('users')
-        .where({ id: userId })
-        .select('perms')
-        .first();
-
-    if (!userPerms) return false;
-
-    const permLevel = userPerms.perms;
-    let allPermissions = [];
-
-    // Combine all permissions from lower levels up to user's level
-    for (let level = 0; level <= permLevel; level++) {
-        const levelPermissions = config.permissions[level] || [];
-        allPermissions = [...allPermissions, ...levelPermissions];
+    // Добавляем дебаг-информацию в начале
+    console.log(`[PERMISSION CHECK] Checking permission "${permission}" for user ID: ${userId}`);
+    
+    try {
+        // 1. Проверяем индивидуальные разрешения пользователя (они имеют приоритет)
+        const userPerm = await knex('user_permissions as up')
+            .join('permissions as p', 'up.permission_id', 'p.id')
+            .where('up.user_id', userId)
+            .where('p.name', permission)
+            .where(function() {
+                this.whereNull('up.expires_at')
+                    .orWhere('up.expires_at', '>', new Date());
+            })
+            .select('up.granted')
+            .first();
+        
+        // Если есть индивидуальное разрешение, возвращаем его значение (granted)
+        if (userPerm) {
+            logger.debug(`[PERMISSION CHECK] User ID ${userId} has individual permission "${permission}" with granted=${userPerm.granted}`);
+            return userPerm.granted;
+        }
+        
+        // 2. Если нет индивидуального разрешения, проверяем группу пользователя
+        const user = await knex('users')
+            .select('permission_group_id', 'username') // Добавляем username для логирования
+            .where('id', userId)
+            .first();
+            
+        if (!user || !user.permission_group_id) {
+            logger.debug(`[PERMISSION CHECK] User ID ${userId} not found or has no permission group`);
+            return false; // Пользователь не найден или не имеет группы
+        }
+        
+        // Получаем группу пользователя и её уровень
+        const group = await knex('permissions_groups')
+            .where('id', user.permission_group_id)
+            .select('level', 'name') // Добавляем name для логирования
+            .first();
+            
+        if (!group) {
+            logger.debug(`[PERMISSION CHECK] Group ID ${user.permission_group_id} for user ID ${userId} not found`);
+            return false; // Группа не найдена
+        }
+        
+        logger.debug(`[PERMISSION CHECK] User ID ${userId} (${user.username}) has group "${group.name}" (level: ${group.level})`);
+        
+        // 3. Ищем разрешение в группе пользователя
+        const hasPermission = await knex('permission_group_relations as pgr')
+            .join('permissions as p', 'pgr.permission_id', 'p.id')
+            .where('p.name', permission)
+            .where('pgr.group_id', user.permission_group_id)
+            .first();
+            
+        const result = !!hasPermission;
+        logger.debug(`[PERMISSION CHECK] Permission "${permission}" for user ID ${userId} in group ${group.name}: ${result ? 'GRANTED' : 'DENIED'}`);
+        
+        return result;
+        
+    } catch (error) {
+        logger.error(`[PERMISSION CHECK] Error checking permission "${permission}" for user ID ${userId}: ${error.message}`);
+        return false; // В случае ошибки возвращаем false для безопасности
     }
-
-    return allPermissions.includes(permission);
 }
-
 export async function addNewTask(task, userId, value, time, removeold = false) {
     try {
         // Use transaction to ensure data consistency
@@ -195,19 +239,19 @@ export async function sendEmbed(mail) {
 export async function verifyPassword(password, hash) {
   if (hash.startsWith('$2')) {
     // bcrypt
-    return await bcrypt.compare(password, hash);
+    return await bcrypt.compare(password, hash, );
   }
-  if (hash.startsWith('$argon2')) {
+  if (hash.startsWith('$argon2id')) {
     // argon2
     return await argon2.verify(hash, password);
   }
-  throw new Error('Unknown hash algorithm');
+  throw new Error('Unknown hash algorithm!');
 }
 
 export async function hashPassword(password) {
-  if (config.passcrypt.type === 'bcrypt') {
-    return await bcrypt.hash(password, config.passcrypt.rounds || 10);
-  } else if (config.passcrypt.type === 'argon2') {
+  if (process.env.PASSCRYPT_TYPE === 'bcrypt') {
+    return await bcrypt.hash(password, process.env.PASSCRYPT_ROUNDS || 10);
+  } else if (process.env.PASSCRYPT_TYPE === 'argon2') {
     return await argon2.hash(password);
   } else {
     throw new Error('Unknown hash algorithm');

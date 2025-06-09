@@ -5,7 +5,7 @@ import { checkPermission } from './common.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
-const JWT_SECRET_KEY = process.env.securecode;
+const JWT_SECRET_KEY = process.env.SECURE_CODE;
 
 /**
  * Middleware for authentication and permission checking

@@ -8,7 +8,7 @@ import logger from '../../logger.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
-const JWT_SECRET_KEY = process.env.securecode;
+const JWT_SECRET_KEY = process.env.SECURE_CODE;
 
 async function finishRegister(req, res) {
     const data = req.body;

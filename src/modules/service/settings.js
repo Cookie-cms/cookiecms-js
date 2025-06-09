@@ -1,11 +1,10 @@
-// import fs from 'fs/promises';
-// import path from 'path';
-// import yaml from 'js-yaml';
-// import logger from '../../logger.js';
-// import readConfig from '../../inc/yamlReader.js';
-// import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
-// import { checkPermission } from '../../inc/common.js';
-// import knex from '../../inc/knex.js';
+import fs from 'fs/promises';
+import path from 'path';
+import yaml from 'js-yaml';
+import logger from '../../logger.js';
+import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
+import { checkPermission } from '../../inc/common.js';
+import knex from '../../inc/knex.js';
 
 // const SENSITIVE_KEYS = [
 //     "securecode", "ServiceApiToken", "pass", "Password",
@@ -42,28 +41,67 @@
 //     return clonedConfig;
 // };
 
-// const getSettings = async (req, res) => {
-//     try {
-//         const config = readConfig();
-//         const { primaryToken, authToken } = extractTokens(req);
+const getSettings = async (req, res) => {
+    try {
+        // const { primaryToken, authToken } = extractTokens(req);
 
-//         if (!primaryToken) return res.status(401).json({ error: true, msg: "Authorization token required" });
-//         if (primaryToken !== config.ServiceApiToken) return res.status(403).json({ error: true, msg: "Invalid token" });
+        // if (!primaryToken) return res.status(401).json({ error: true, msg: "Authorization token required" });
+        // if (primaryToken !== config.ServiceApiToken) return res.status(403).json({ error: true, msg: "Invalid token" });
         
-//         const valid = await isJwtExpiredOrBlacklisted(authToken, config.securecode);
-//         if (!valid.valid) return res.status(401).json({ error: true, msg: "Invalid JWT" });
+        // const valid = await isJwtExpiredOrBlacklisted(authToken, config.securecode);
+        // if (!valid.valid) return res.status(401).json({ error: true, msg: "Invalid JWT" });
         
-//         const userId = valid.data.sub;
-//         const permissions = await checkPermission(userId, 'admin.settings');
-//         if (!permissions) return res.status(403).json({ error: true, msg: "Insufficient permissions" });
+        // const userId = valid.data.sub;
+        // const permissions = await checkPermission(userId, 'admin.settings');
+        // if (!permissions) return res.status(403).json({ error: true, msg: "Insufficient permissions" });
         
-//         logger.info('Settings retrieved successfully');
-//         return res.json({ error: false, msg: "Settings retrieved", data: censorConfig(config) });
-//     } catch (error) {
-//         logger.error('Error retrieving settings:', error);
-//         return res.status(500).json({ error: true, msg: "Failed to retrieve settings" });
-//     }
-// };
+        // Получаем группы разрешений
+        const permissionGroups = await knex('permissions_groups')
+            .select('id', 'name', 'description', 'level', 'is_default')
+            .orderBy('level');
+        
+        // Получаем все разрешения
+        const allPermissions = await knex('permissions')
+            .select('id', 'name', 'category', 'description');
+            
+        // Получаем связи между группами и разрешениями
+        const groupPermissions = await knex('permission_group_relations as pgr')
+            .join('permissions as p', 'pgr.permission_id', 'p.id')
+            .select('pgr.group_id', 'p.name as permission_name')
+            .orderBy('pgr.group_id');
+            
+        // Формируем структуру данных с отношениями
+        const permissionsByGroup = {};
+        groupPermissions.forEach(relation => {
+            if (!permissionsByGroup[relation.group_id]) {
+                permissionsByGroup[relation.group_id] = [];
+            }
+            permissionsByGroup[relation.group_id].push(relation.permission_name);
+        });
+        
+        // Добавляем разрешения к группам
+        const groupsWithPermissions = permissionGroups.map(group => ({
+            ...group,
+            permissions: permissionsByGroup[group.id] || []
+        }));
+        
+        logger.info('Settings retrieved successfully');
+        return res.json({ 
+            error: false, 
+            msg: "Settings retrieved", 
+            data: {
+                // config: censorConfig(config),
+                permissions: {
+                    groups: groupsWithPermissions,
+                    all: allPermissions
+                }
+            } 
+        });
+    } catch (error) {
+        logger.error('Error retrieving settings:', error);
+        return res.status(500).json({ error: true, msg: "Failed to retrieve settings" });
+    }
+};
 
 // const updateSettings = async (req, res) => {
 //     try {
@@ -117,4 +155,4 @@
 //     }
 // };
 
-// export { getSettings, updateSettings };
+export { getSettings };

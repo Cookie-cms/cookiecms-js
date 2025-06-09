@@ -1,12 +1,12 @@
-import bcrypt from 'bcrypt';
 import knex from '../../inc/knex.js';
 import logger from '../../logger.js';
 import { generateJwtToken } from '../../inc/jwtHelper.js';
+import { verifyPassword } from '../../inc/common.js';
 
 import dotenv from 'dotenv';
 
 dotenv.config();
-const JWT_SECRET_KEY = process.env.securecode;
+const JWT_SECRET_KEY = process.env.SECURE_CODE;
 
 function validate(data) {
     if (typeof data !== 'string') return '';
@@ -64,7 +64,7 @@ async function login(req, res) {
 
         let passwordMatch = false;
         try {
-            passwordMatch = await bcrypt.compare(validatedPassword, user.password);
+            passwordMatch = await verifyPassword(validatedPassword, user.password);
         } catch (err) {
             logger.error("[ERROR] Password comparison error:", err);
             return res.status(500).json({ error: true, msg: 'Error verifying credentials' });

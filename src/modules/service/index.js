@@ -1,6 +1,6 @@
-import { getSettings, updateSettings } from './settings.js';
+import { getSettings } from './settings.js';
 
 export default {
     getSettings,
-    updateSettings
+    // updateSettings
 };

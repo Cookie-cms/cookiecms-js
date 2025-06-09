@@ -6,23 +6,41 @@ import { addaudit } from '../../inc/common.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
-const JWT_SECRET_KEY = process.env.securecode;
+const JWT_SECRET_KEY = process.env.SECURE_CODE;
 
 async function validatePassword(userId, password) {
-    const user = await knex('users')
-        .where('id', userId)
-        .first('password');
+    try {
+        const user = await knex('users')
+            .where('id', userId)
+            .first('password');
+            
+        if (!user || !user.password) {
+            logger.warn(`Password validation failed: User ${userId} not found or no password set`);
+            return false;
+        }
         
-    if (!user) return false;
-    
-    return bcrypt.compare(password, user.password);
+        // Используем try-catch для обработки ошибок bcrypt
+        try {
+            const isValid = await bcrypt.compare(password, user.password);
+            return isValid;
+        } catch (cryptError) {
+            logger.error(`Bcrypt error: ${cryptError.message}`);
+            return false;
+        }
+    } catch (error) {
+        logger.error(`Password validation database error: ${error.message}`);
+        return false; // Не бросаем исключение, а возвращаем false
+    }
 }
 
 async function updateUsername(userId, newUsername, currentPassword) {
-    if (!await validatePassword(userId, currentPassword)) {
+    // Проверка пароля
+    const isValidPassword = await validatePassword(userId, currentPassword);
+    if (!isValidPassword) {
         throw new Error('Invalid password');
     }
 
+    // Проверка на существующее имя пользователя
     const existingUser = await knex('users')
         .where('username', newUsername)
         .whereNot('id', userId)
@@ -32,6 +50,7 @@ async function updateUsername(userId, newUsername, currentPassword) {
         throw new Error('Username is already taken by another user');
     }
 
+    // Обновление имени пользователя
     await knex('users')
         .where('id', userId)
         .update({ username: newUsername });
@@ -56,40 +75,52 @@ async function username(req, res) {
         const userId = status.data.sub;
         const { username, password } = req.body;
 
-        if (username && password) {
-            // Get the old username for audit log
-            const user = await knex('users')
-                .where('id', userId)
-                .first('username');
-                
-            const oldUsername = user?.username;
-            
-            // Use transaction for data consistency
-            await knex.transaction(async (trx) => {
-                // Add audit log
-                await addaudit(userId, 5, userId, oldUsername, username, 'username');
-                
-                // Update username
-                await updateUsername(userId, username, password);
-            });
-            
-            return res.status(200).json({ 
-                error: false, 
-                msg: 'Username updated successfully', 
-                username: username 
-            });
-        } else {
+        // Проверка входных данных
+        if (!username || !password) {
             return res.status(400).json({ 
                 error: true, 
                 msg: 'Missing required fields for updating username' 
             });
         }
 
+        try {
+            // Get the old username for audit log
+            const user = await knex('users')
+                .where('id', userId)
+                .first('username');
+                
+            if (!user) {
+                return res.status(404).json({ error: true, msg: 'User not found' });
+            }
+                
+            const oldUsername = user.username;
+            
+            // Проверяем и обновляем имя пользователя
+            await updateUsername(userId, username, password);
+            
+            // Добавляем аудит только после успешного обновления
+            await addaudit(userId, 5, userId, oldUsername, username, 'username');
+            
+            return res.status(200).json({ 
+                error: false, 
+                msg: 'Username updated successfully', 
+                username: username 
+            });
+        } catch (updateError) {
+            // Возвращаем понятную ошибку пользователю
+            if (updateError.message === 'Invalid password') {
+                return res.status(401).json({ error: true, msg: 'Invalid password' });
+            } else if (updateError.message.includes('already taken')) {
+                return res.status(409).json({ error: true, msg: 'Username is already taken' });
+            } else {
+                throw updateError; // Пробрасываем другие ошибки в общий обработчик
+            }
+        }
     } catch (err) {
-        logger.error("[ERROR] Database Error: ", err);
+        logger.error("[ERROR] Username update error: ", err);
         return res.status(500).json({ 
             error: true, 
-            msg: 'Internal Server Error: ' + err.message 
+            msg: 'Internal Server Error' // Не возвращаем детали ошибки в production
         });
     }
 }

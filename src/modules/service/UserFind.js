@@ -28,7 +28,6 @@ export async function userFind(req, res) {
     // Формируем ответ
     return res.json({
         discord: {
-            username: user.discord_username || "",
             id: user.dsid || ""
         },
         account: {

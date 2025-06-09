@@ -1,18 +1,18 @@
-import readConfig from './yamlReader.js.bak';
+import dotenv from 'dotenv';
 
-const config = readConfig();
+dotenv.config();
 
 // Determine which database client to use based on configuration
-const dbType = config.database.type || 'pg'; // Default to mysql2 if not specified
+const dbType = process.env.DB_TYPE || 'pg'; // Default to mysql2 if not specified
 
 const knexConfig = {
   client: dbType,
   connection: {
-    host: config.database.host,
-    user: config.database.username,
-    password: config.database.pass,
-    database: config.database.db,
-    port: config.database.port
+    host: process.env.DB_HOST,
+    user: process.env.DB_USERNAME,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT
   },
   pool: {
     min: 2,

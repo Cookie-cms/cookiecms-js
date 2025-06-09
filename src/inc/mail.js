@@ -1,6 +1,4 @@
 import nodemailer from 'nodemailer';
-import { readFile } from 'fs/promises';
-import readConfig from './yamlReader.js.bak/index.js';
 import logger from '../logger.js';
 
 import dotenv from 'dotenv';

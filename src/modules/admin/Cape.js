@@ -4,11 +4,13 @@ import fs from 'fs/promises';
 import path from 'path';
 import logger from '../../logger.js';
 import knex from '../../inc/knex.js';
+import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
+import { checkPermission } from '../../inc/common.js';
 
 import dotenv from 'dotenv';
 
 dotenv.config();
-const JWT_SECRET_KEY = process.env.securecode;
+const JWT_SECRET_KEY = process.env.SECURE_CODE;
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -21,18 +23,7 @@ const storage = multer.diskStorage({
     }
 });
 
-async function checkPermission(userId) {
-    const user = await knex('users')
-        .where({ id: userId })
-        .first('permlvl');
-    
-    if (!user) return false;
-    
-    const permLevel = user.permlvl;
-    const permissions = config.permissions[permLevel] || [];
-    
-    return permissions.includes('admin.capes');
-}
+// Удаляем старую функцию checkPermission, вместо нее мы будем использовать импортированную
 
 const upload = multer({
     storage,
@@ -48,7 +39,22 @@ const upload = multer({
 
 async function uploadCape(req, res) {
     try {
-        const hasPermission = await checkPermission(req.userId);
+        // Извлекаем token и проверяем JWT
+        const token = req.headers['authorization']?.replace('Bearer ', '') || '';
+        
+        if (!token) {
+            return res.status(401).json({ error: true, msg: 'Authentication required' });
+        }
+        
+        const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
+        if (!status.valid) {
+            return res.status(401).json({ error: true, msg: status.message });
+        }
+        
+        const userId = status.data.sub;
+        
+        // Проверяем разрешения с помощью новой системы
+        const hasPermission = await checkPermission(userId, 'admin.capes');
         if (!hasPermission) {
             return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
         }
@@ -89,7 +95,22 @@ async function uploadCape(req, res) {
 
 async function updateCape(req, res) {
     try {
-        const hasPermission = await checkPermission(req.userId);
+        // Извлекаем token и проверяем JWT
+        const token = req.headers['authorization']?.replace('Bearer ', '') || '';
+        
+        if (!token) {
+            return res.status(401).json({ error: true, msg: 'Authentication required' });
+        }
+        
+        const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
+        if (!status.valid) {
+            return res.status(401).json({ error: true, msg: status.message });
+        }
+        
+        const userId = status.data.sub;
+        
+        // Проверяем разрешения с помощью новой системы
+        const hasPermission = await checkPermission(userId, 'admin.capes');
         if (!hasPermission) {
             return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
         }
@@ -110,7 +131,22 @@ async function updateCape(req, res) {
 
 async function deleteCape(req, res) {
     try {
-        const hasPermission = await checkPermission(req.userId);
+        // Извлекаем token и проверяем JWT
+        const token = req.headers['authorization']?.replace('Bearer ', '') || '';
+        
+        if (!token) {
+            return res.status(401).json({ error: true, msg: 'Authentication required' });
+        }
+        
+        const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
+        if (!status.valid) {
+            return res.status(401).json({ error: true, msg: status.message });
+        }
+        
+        const userId = status.data.sub;
+        
+        // Проверяем разрешения с помощью новой системы
+        const hasPermission = await checkPermission(userId, 'admin.capes');
         if (!hasPermission) {
             return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
         }

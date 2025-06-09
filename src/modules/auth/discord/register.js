@@ -7,7 +7,7 @@ import { updateDiscordInfo, insertDiscordInfo } from './discordinfo.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
-const JWT_SECRET_KEY = process.env.securecode;
+const JWT_SECRET_KEY = process.env.SECURE_CODE;
 
 async function registerUser(userResponse, res) {
     const token = userResponse.headers['authorization'] ? userResponse.headers['authorization'].replace('Bearer ', '') : '';

@@ -9,6 +9,8 @@ src/config.backup.yml
 .env.local
 .env.development.local
 
+uploads/*
+
 
 # Logs
 logs/
