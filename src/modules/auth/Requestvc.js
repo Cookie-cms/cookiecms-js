@@ -5,11 +5,7 @@ import { sendVerificationEmail } from '../../inc/mail_templates.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
-function validate(data) {
-    data = data.trim();
-    data = data.replace(/<[^>]*>?/gm, '');
-    return data;
-}
+
 
 async function requestVerificationCode(req, res) {
     const { mail } = req.body;

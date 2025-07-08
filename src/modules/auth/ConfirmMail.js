@@ -1,20 +1,27 @@
 import knex from '../../inc/knex.js';
 import logger from '../../logger.js';
+import { validateData } from '../../middleware/validation.js';
 
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 async function ConfirmMail(req, res) {
-    const { code } = req.body;
-
-    if (config.production === "demo") {
+    if (process.env.ENV === "demo") {
         return res.status(403).json({ error: true, msg: 'Email confirmation is disabled in demo mode.' });
     }
 
-    if (!code) {
-        return res.status(400).json({ error: true, msg: 'Code not provided' });
+    // Валидация входных данных
+    const validation = validateData(req.body, 'confirmMail');
+    if (!validation.isValid) {
+        return res.status(400).json({
+            error: true,
+            msg: 'Validation failed',
+            details: validation.errors
+        });
     }
+
+    const { code } = validation.value;
 
     try {
         const result = await knex('verify_codes')

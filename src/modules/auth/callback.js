@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import knex from '../../inc/knex.js';
 import logger from '../../logger.js';
 import { createResponse, addaudit } from '../../inc/common.js';
+import { validateData } from '../../middleware/validation.js';
 
 import dotenv from 'dotenv';
 
@@ -23,7 +24,7 @@ function generateToken(userId) {
 
 async function linkDiscordToUser(userResponse, userId) {
     await knex('users')
-        .where('id', uid)
+        .where('id', userId)
         .update({ dsid: userResponse.id });
 
     await addaudit(userId, 9, userId, null, userResponse.id, 'dsid');
@@ -99,10 +100,17 @@ async function registerUser(userResponse, req, res) {
 }
 
 export async function discordCallback(req, res) {
-    const code = req.query.code;
-    if (!code) {
-        return res.status(400).json({ error: 'No code provided' });
+    // Валидация query параметров
+    const validation = validateData(req.query, 'discordCallback');
+    if (!validation.isValid) {
+        return res.status(400).json({
+            error: true,
+            msg: 'Validation failed',
+            details: validation.errors
+        });
     }
+
+    const { code } = validation.value;
 
     try {
         const tokenResponse = await oauth.initOAuth(

@@ -4,6 +4,7 @@ import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import knex from '../../inc/knex.js';
 import { addaudit } from '../../inc/common.js';
 import logger from '../../logger.js';
+import { validateData } from '../../middleware/validation.js';
 
 import dotenv from 'dotenv';
 
@@ -11,14 +12,17 @@ dotenv.config();
 const JWT_SECRET_KEY = process.env.SECURE_CODE;
 
 async function finishRegister(req, res) {
-    const data = req.body;
-
-    // logger.info("Incoming request body: " + JSON.stringify(data, null, 2));
-
-    if (!data.username) {
-        logger.info("Username is required.");
-        return res.status(400).json({ error: true, msg: 'Username is required.' });
+    // Валидация входных данных
+    const validation = validateData(req.body, 'finishRegister');
+    if (!validation.isValid) {
+        return res.status(400).json({
+            error: true,
+            msg: 'Validation failed',
+            details: validation.errors
+        });
     }
+
+    const { username, password } = validation.value;
 
     const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
 
@@ -50,7 +54,7 @@ async function finishRegister(req, res) {
         }
 
         const existingUsername = await knex('users')
-            .where('username', data.username)
+            .where('username', username)
             .first();
 
         if (existingUsername) {
@@ -66,7 +70,7 @@ async function finishRegister(req, res) {
                     .where('id', userId)
                     .update({
                         uuid: newUuid,
-                        username: data.username
+                        username: username
                     });
 
                 // Add audit log
@@ -75,13 +79,13 @@ async function finishRegister(req, res) {
                     5,
                     userId,
                     null,  // oldValue
-                    data.username,  // newValue
+                    username,  // newValue
                     'users-update'  // fieldChanged
                 );
 
                 // Update password if provided
-                if (data.password) {
-                    const hashedPassword = await bcrypt.hash(data.password, 10);
+                if (password) {
+                    const hashedPassword = await bcrypt.hash(password, 10);
                     await trx('users')
                         .where('id', userId)
                         .update({ password: hashedPassword });

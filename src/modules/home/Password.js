@@ -2,6 +2,7 @@ import knex from '../../inc/knex.js';
 import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import logger from '../../logger.js';
 import { addaudit, verifyPassword, hashPassword } from '../../inc/common.js';
+import { validateData } from '../../middleware/validation.js';
 
 import dotenv from 'dotenv';
 

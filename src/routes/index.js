@@ -25,6 +25,9 @@ import {
 } from '../modules/service/GravitLauncher.js';
 import {userFind} from '../modules/service/UserFind.js';
 
+import {requireAuth} from '../middleware/auth.js';
+
+
 const router = express.Router();
 
 // Public routes
@@ -44,51 +47,49 @@ router.get('/auth/discord/callback', auth.discordCallback);
 router.get('/auth/discord/link', auth.generateAuthLink);
 router.post('/auth/register/discord', auth.discordcreate);
 
-// Home routes
-router.get('/home', home.home);
-router.put('/home/edit/username', home.username);
-router.put('/home/edit/password', home.editPassword);
-router.post('/home/edit/mail/request', home.changemail);
-router.post('/home/edit/mail/validate', home.validatecode);
-router.put('/home/edit/skin', home.editSkin);
-router.post('/home/edit/skin/select', home.editSkin);
-router.delete('/home/edit/skin', home.editSkin);
-router.post('/home/upload', home.upload);
-router.post('/home/edit/removediscord', home.removediscordconn);
+// Home routes (требуют авторизации)
+router.get('/home', requireAuth, home.home);
+router.put('/home/edit/username', requireAuth, home.username);
+router.put('/home/edit/password', requireAuth, home.editPassword);
+router.post('/home/edit/mail/request', requireAuth, home.changemail);
+router.post('/home/edit/mail/validate', requireAuth, home.validatecode);
+router.put('/home/edit/skin', requireAuth, home.editSkin);
+router.post('/home/edit/skin/select', requireAuth, home.editSkin);
+router.delete('/home/edit/skin', requireAuth, home.editSkin);
+router.post('/home/upload', requireAuth, home.upload);
+router.post('/home/edit/removediscord', requireAuth, home.removediscordconn);
 
-// Admin routes
-router.get('/admin/users', admin.users);
-router.get('/admin/user/:id', admin.user);
-router.put('/admin/user/:id', admin.user_udp);
+// Admin routes (требуют авторизации)
+router.get('/admin/users', requireAuth, admin.users);
+router.get('/admin/user/:id', requireAuth, admin.user);
+// router.put('/admin/user/:id', requireAuth, admin.user_udp);
 
-router.post('/admin/cape', admin.uploadCape);
-router.delete('/admin/cape', admin.deleteCape);
-router.put('/admin/cape', admin.updateCape);
+router.post('/admin/cape', requireAuth, admin.uploadCape);
+router.delete('/admin/cape', requireAuth, admin.deleteCape);
+router.put('/admin/cape', requireAuth, admin.updateCape);
 
-router.get('/admin/audit', admin.audit);
-router.post('/admin/user/role/', admin.user_role);
-router.post('/admin/user/cape/:id', admin.uploadCape);
-router.get('/admin/allcapes', admin.allcapes);
-router.get('/admin/skins', admin.getSkins);
+router.get('/admin/audit', requireAuth, admin.audit);
+// router.post('/admin/user/role/', requireAuth, admin.user_role);
+router.post('/admin/user/cape/:id', requireAuth, admin.uploadCape);
+router.get('/admin/allcapes', requireAuth, admin.allcapes);
+router.get('/admin/skins', requireAuth, admin.getSkins);
 
-router.get('/admin/metrics', admin.userRegistrationStats);
-router.get('/admin/metrics/users', admin.allusers);
-router.get('/admin/metrics/skins', admin.skins);
+router.get('/admin/metrics', requireAuth, admin.userRegistrationStats);
+router.get('/admin/metrics/users', requireAuth, admin.allusers);
+router.get('/admin/metrics/skins', requireAuth, admin.skins);
 
-// router.post('/admin/user', (req, res) => {
-//     res.send('Welcome to the Express app!');
-// });
-// router.post('/admin/mail', (req, res) => {
-//     res.send('Welcome to the Express app!');
-// });
-// router.post('/admin/user/role/:id', (req, res) => {
-//     res.send('Welcome to the Express app!');
-// });
-// router.post('/admin/user/cape/:id', (req, res) => {
-//     res.send('Welcome to the Express app!');
-// });
+router.get('/admin/permissions', requireAuth, admin.getPermissions);
+router.post('/admin/permissions', requireAuth, admin.createPermission);
+router.put('/admin/permissions/:id', requireAuth, admin.updatePermission);
+router.delete('/admin/permissions/:id', requireAuth, admin.deletePermission);
+router.get('/admin/roles', requireAuth, admin.getRoles);
+router.post('/admin/roles', requireAuth, admin.createRole);
+router.put('/admin/roles/:id', requireAuth, admin.updateRole);
+router.delete('/admin/roles/:id', requireAuth, admin.deleteRole);
+router.post('/admin/roles/:id/permissions', requireAuth, admin.assignPermissionToRole);
+router.delete('/admin/roles/:roleId/permissions/:permissionId', requireAuth, admin.revokePermissionFromRole);
 
-
+router.get('/admin/rolepermissions/extended', requireAuth, admin.getExtendedRolePermissions);
 
 // Skins routes
 router.get('/skin/gravitlauncher/:uuid', skins.gravitLauncherResponse);

@@ -5,56 +5,46 @@ import axios from 'axios';
 import logger from '../../logger.js';
 import { sendVerificationEmail, sendWelcomeEmail } from '../../inc/mail_templates.js';
 import { addaudit } from '../../inc/common.js';
+import { validateData } from '../../middleware/validation.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-function validate(data) {
-    data = data.trim();
-    data = data.replace(/<[^>]*>?/gm, '');
-    return data;
-}
-
 export async function signup(req, res) {
-    const { mail, password } = req.body;
-
     if (process.env.ENV === "demo") {
         return res.status(403).json({ error: true, msg: "Registration is disabled in demo mode." });
     }
 
-    if (!mail || !password) {
-        return res.status(400).json({ error: true, msg: "Incomplete form data provided." });
+    // Валидация входных данных
+    const validation = validateData(req.body, 'signup');
+    if (!validation.isValid) {
+        return res.status(400).json({
+            error: true,
+            msg: 'Validation failed',
+            details: validation.errors
+        });
     }
 
-    const validatedMail = validate(mail);
-    const validatedPassword = validate(password);
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(validatedMail)) {
-        return res.status(400).json({ error: true, msg: "Invalid email format" });
-    }
-
-    if (validatedPassword.length < 8) {
-        return res.status(400).json({ error: true, msg: "Password must be at least 8 characters" });
-    }
+    const { email, password } = validation.value;
 
     try {
         // Check if email already exists
         const existingUser = await knex('users')
-            .whereRaw('LOWER(mail) = LOWER(?)', [validatedMail])
+            .whereRaw('LOWER(mail) = LOWER(?)', [email])
             .first();
 
         if (existingUser) {
             return res.status(409).json({ error: true, msg: "Email is already registered." });
         }
 
-        const hashedPassword = await bcrypt.hash(validatedPassword, 10);
+        const hashedPassword = await bcrypt.hash(password, 10);
 
         // Use transaction for data consistency
         await knex.transaction(async (trx) => {
             // Insert new user
             const [userId] = await trx('users')
                 .insert({
-                    mail: validatedMail,
+                    mail: email,
                     password: hashedPassword
                 })
                 .returning('id')

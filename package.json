@@ -25,6 +25,7 @@
     "http": "^0.0.1-security",
     "inquirer": "^12.4.1",
     "jimp": "^1.6.0",
+    "joi": "^17.13.3",
     "js-yaml": "^4.1.0",
     "jsonwebtoken": "^9.0.2",
     "knex": "^3.1.0",

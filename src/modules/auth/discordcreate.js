@@ -6,23 +6,24 @@ import logger from '../../logger.js';
 import sendEmbed from '../../inc/common.js';
 import { generateJwtToken } from '../../inc/jwtHelper.js';
 import { addaudit } from '../../inc/common.js';
+import { validateData } from '../../middleware/validation.js';
 
 import dotenv from 'dotenv';
 dotenv.config();
 
-function validate(data) {
-    data = data.trim();
-    data = data.replace(/<[^>]*>?/gm, '');
-    return data;
-}
-
 export async function discordcreate(req, res) {
-    const { meta = {} } = req.body;
-    const { id, conn_id } = meta;
-
-    if (!id || !conn_id) {
-        return res.status(400).json({ error: true, msg: "Incomplete form data provided." });
+    // Валидация входных данных
+    const validation = validateData(req.body, 'discordCreate');
+    if (!validation.isValid) {
+        return res.status(400).json({
+            error: true,
+            msg: 'Validation failed',
+            details: validation.errors
+        });
     }
+
+    const { meta } = validation.value;
+    const { id, conn_id } = meta;
 
     try {
         const JWT_SECRET_KEY = process.env.SECURE_CODE;

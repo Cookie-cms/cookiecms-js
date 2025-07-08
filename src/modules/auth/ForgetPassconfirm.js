@@ -1,22 +1,29 @@
 import knex from '../../inc/knex.js';
 import bcrypt from 'bcrypt';
 import logger from '../../logger.js';
-import createResponse from '../../inc/common.js';
+import { createResponse } from '../../inc/common.js';
+import { validateData } from '../../middleware/validation.js';
 
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 export async function validate_code_fp(req, res) {
-    const { code } = req.body;
-
-    if (process.env.production === "demo") {
+    if (process.env.ENV === "demo") {
         return res.status(403).json(createResponse(true, 'Password reset is disabled in demo mode.'));
     }
 
-    if (!code) {
-        return res.status(400).json(createResponse(true, 'Code not provided'));
+    // Валидация входных данных
+    const validation = validateData(req.body, 'confirmMail');
+    if (!validation.isValid) {
+        return res.status(400).json({
+            error: true,
+            msg: 'Validation failed',
+            details: validation.errors
+        });
     }
+
+    const { code } = validation.value;
 
     try {
         const result = await knex('verify_codes')

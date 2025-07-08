@@ -7,9 +7,9 @@ import updatepass from './ForgetPassupdate.js';
 import confirmMail from './ConfirmMail.js';
 import finishRegister from './FinishRegister.js';
 import generateAuthLink from './discordlink.js';
-import discordCallback from './callback.js';
+import { discordCallback } from './callback.js';
 import requestVerificationCode from './Requestvc.js';
-import discordcreate from './discordcreate.js';
+import { discordcreate } from './discordcreate.js';
 
 export default {
     login,

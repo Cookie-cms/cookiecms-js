@@ -4,9 +4,22 @@ import users from './users.js';
 import {user} from './user.js';
 import allcapes from './allcapes.js';
 import getSkins from './skins.js';
-import user_role from './user_role.js';
-import user_udp from './user_udp.js';
+import {
+    getPermissions,
+    createPermission,
+    updatePermission,
+    deletePermission,
+    getRoles,
+    createRole,
+    updateRole,
+    deleteRole,
+    assignPermissionToRole,
+    revokePermissionFromRole,
+    getExtendedRolePermissions
+    } from './role.js';
 import { skins, allusers, userRegistrationStats } from './metrics.js';
+import { get } from 'http';
+
 
 export default {
     uploadCape,
@@ -17,10 +30,18 @@ export default {
     user,
     allcapes,
     getSkins,
-    user_role,
-    user_udp,
     skins,
     allusers,
-    userRegistrationStats
-
+    userRegistrationStats,
+    getPermissions,
+    createPermission,
+    updatePermission,
+    deletePermission,
+    getRoles,
+    createRole,
+    updateRole,
+    deleteRole,
+    assignPermissionToRole,
+    revokePermissionFromRole,
+    getExtendedRolePermissions
 };

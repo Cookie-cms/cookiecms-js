@@ -2,16 +2,12 @@ import knex from '../../inc/knex.js';
 import logger from '../../logger.js';
 import { generateJwtToken } from '../../inc/jwtHelper.js';
 import { verifyPassword } from '../../inc/common.js';
+import { validateData } from '../../middleware/validation.js';
 
 import dotenv from 'dotenv';
 
 dotenv.config();
 const JWT_SECRET_KEY = process.env.SECURE_CODE;
-
-function validate(data) {
-    if (typeof data !== 'string') return '';
-    return data.trim().replace(/<[^>]*>?/gm, '');
-}
 
 function isEmail(input) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input);
@@ -19,24 +15,27 @@ function isEmail(input) {
 
 async function login(req, res) {
     try {
-        const { username, password, meta } = req.body;
-
-        if (!username || !password) {
-            return res.status(400).json({ error: true, msg: 'Username or password not provided' });
+        // Валидация входных данных
+        const validation = validateData(req.body, 'sign');
+        if (!validation.isValid) {
+            return res.status(400).json({
+                error: true,
+                msg: 'Validation failed',
+                details: validation.errors
+            });
         }
 
-        const validatedUsername = validate(username);
-        const validatedPassword = validate(password);
+        const { username, password, meta } = validation.value;
 
         let user;
 
         try {
             const query = knex('users');
 
-            if (isEmail(validatedUsername)) {
-                query.where('mail', validatedUsername);
+            if (isEmail(username)) {
+                query.where('mail', username);
             } else {
-                query.where('username', validatedUsername);
+                query.where('username', username);
             }
 
             user = await query.first();
@@ -64,7 +63,7 @@ async function login(req, res) {
 
         let passwordMatch = false;
         try {
-            passwordMatch = await verifyPassword(validatedPassword, user.password);
+            passwordMatch = await verifyPassword(password, user.password);
         } catch (err) {
             logger.error("[ERROR] Password comparison error:", err);
             return res.status(500).json({ error: true, msg: 'Error verifying credentials' });

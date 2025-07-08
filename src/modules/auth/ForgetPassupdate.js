@@ -2,20 +2,28 @@ import bcrypt from 'bcrypt';
 import { createResponse, addaudit } from '../../inc/common.js';
 import knex from '../../inc/knex.js';
 import logger from '../../logger.js';
+import { validateData } from '../../middleware/validation.js';
 
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 async function updatepass(req, res) {
-    const { code, password } = req.body;
-
     if (process.env.ENV === "demo") {
         return res.status(403).json(createResponse(true, 'Password reset is disabled in demo mode.'));
     }
-    if (!code || !password) {
-        return res.status(400).json(createResponse(true, 'Code and new password are required'));
+
+    // Валидация входных данных
+    const validation = validateData(req.body, 'resetPassword');
+    if (!validation.isValid) {
+        return res.status(400).json({
+            error: true,
+            msg: 'Validation failed',
+            details: validation.errors
+        });
     }
+
+    const { code, password } = validation.value;
 
     try {
         // Using knex transaction to ensure data consistency

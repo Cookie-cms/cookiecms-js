@@ -1,48 +1,43 @@
 import knex from '../../inc/knex.js';
 import logger from '../../logger.js';
+import { validateData } from '../../middleware/validation.js';
 
 import dotenv from 'dotenv';
 
 dotenv.config();
-function validate(data) {
-    data = data.trim();
-    data = data.replace(/<[^>]*>?/gm, '');
-    return data;
-}
 
 async function resetPassword(req, res) {
-    const { mail } = req.body;
-
-    if (config.production === "demo") {
+    if (process.env.ENV === "demo") {
         return res.status(403).json({ error: true, msg: "Reset password is disabled in demo mode." });
     }
 
-    if (!mail) {
-        return res.status(400).json({ error: true, msg: 'Email not provided.' });
+    // Валидация входных данных
+    const validation = validateData(req.body, 'forgetPasswordRequest');
+    if (!validation.isValid) {
+        return res.status(400).json({
+            error: true,
+            msg: 'Validation failed',
+            details: validation.errors
+        });
     }
 
-    const validatedMail = validate(mail);
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(validatedMail)) {
-        return res.status(400).json({ error: true, msg: 'Invalid email format.' });
-    }
+    const { mail } = validation.value;
 
     try {
         // Check if email exists
         const user = await knex('users')
-            .whereRaw('LOWER(mail) = LOWER(?)', [validatedMail])
+            .whereRaw('LOWER(mail) = LOWER(?)', [mail])
             .first('id');
 
         if (!user) {
             return res.status(404).json({ error: true, msg: 'Email not found.' });
         }
+        
         let randomCode = '';
 
         // Generate a new verification code
-        if (process.env.env === "prod") {
-
+        if (process.env.ENV === "prod") {
             const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-            let randomCode = '';
             const length = 6;
             for (let i = 0; i < length; i++) {
                 randomCode += characters.charAt(Math.floor(Math.random() * characters.length));
