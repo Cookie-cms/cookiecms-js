@@ -38,6 +38,8 @@ services:
     networks:
       - cookiecms_net
 
+      
+
 volumes:
   postgres_data:
 
