@@ -34,9 +34,19 @@ export const validateRequest = (schemaName, source = 'body') => {
 
             logger.warn(`Validation failed for ${schemaName}:`, errorMessages);
             
+            // Получаем первую ошибку для сообщения
+            let mainError = "Validation failed";
+            if (errorMessages.length > 0) {
+                if (errorMessages[0].field === 'mail' && errorMessages[0].message.includes('valid')) {
+                    mainError = "Invalid email format";
+                } else if (errorMessages[0].field === 'password' && errorMessages[0].message.includes('length')) {
+                    mainError = "Password must be at least 8 characters long";
+                }
+            }
+            
             return res.status(400).json({
                 error: true,
-                msg: 'Validation failed',
+                msg: mainError,
                 details: errorMessages
             });
         }

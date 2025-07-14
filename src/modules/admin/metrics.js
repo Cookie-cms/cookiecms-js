@@ -1,29 +1,18 @@
 import knex from '../../inc/knex.js';
-import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
-import { checkPermission, addNewTask } from '../../inc/common.js';
+import { checkPermissionInc } from '../../inc/common.js';
 import logger from '../../logger.js';
 
-import dotenv from 'dotenv';
-
-dotenv.config();
-const JWT_SECRET_KEY = process.env.SECURE_CODE;
 
 async function skins(req, res) {
-    const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
-    
-    if (!token) {
-        return res.status(401).json({ error: true, msg: 'Invalid JWT', code: 401 });
-    }
-
+   
     try {
-        const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
-        
-        if (!status.valid) {
-            return res.status(401).json({ error: true, msg: status.message, code: 401 });
-        }
-
-        if (!await checkPermission(status.data.sub, 'admin.useredit')) {
-            return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
+       
+        if (!await checkPermissionInc(req, 'admin.metrics')) {
+            return res.status(403).json({
+                error: true,
+                msg: 'Permission denied',
+                code: 403
+            });
         }
        
         const [result] = await knex('skins_library')
@@ -44,20 +33,10 @@ async function skins(req, res) {
 }
 
 async function allusers(req, res) {
-    const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
-    
-    if (!token) {
-        return res.status(401).json({ error: true, msg: 'Invalid JWT', code: 401 });
-    }
-
     try {
-        const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
         
-        if (!status.valid) {
-            return res.status(401).json({ error: true, msg: status.message, code: 401 });
-        }
 
-        if (!await checkPermission(status.data.sub, 'admin.useredit')) {
+        if (!await checkPermissionInc(req, 'admin.useredit')) {
             return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
         }
        
@@ -79,20 +58,8 @@ async function allusers(req, res) {
 }
 
 async function userRegistrationStats(req, res) {
-    const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
-    
-    if (!token) {
-        return res.status(401).json({ error: true, msg: 'Invalid JWT', code: 401 });
-    }
-
     try {
-        const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
-        
-        if (!status.valid) {
-            return res.status(401).json({ error: true, msg: status.message, code: 401 });
-        }
-
-        if (!await checkPermission(status.data.sub, 'admin.useredit')) {
+        if (!await checkPermissionInc(req, 'admin.useredit')) {
             return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
         }
         

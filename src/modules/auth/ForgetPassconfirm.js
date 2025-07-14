@@ -10,7 +10,7 @@ dotenv.config();
 
 export async function validate_code_fp(req, res) {
     if (process.env.ENV === "demo") {
-        return res.status(403).json(createResponse(true, 'Password reset is disabled in demo mode.'));
+        return res.status(403).json(createResponse('Password reset is disabled in demo mode.'));
     }
 
     // Валидация входных данных
@@ -18,7 +18,7 @@ export async function validate_code_fp(req, res) {
     if (!validation.isValid) {
         return res.status(400).json({
             error: true,
-            msg: 'Validation failed',
+            msg: 'Invalid or expired token',
             details: validation.errors
         });
     }
@@ -33,7 +33,7 @@ export async function validate_code_fp(req, res) {
             .first();
 
         if (!result) {
-            return res.status(400).json(createResponse(true, 'Invalid or expired token'));
+            return res.status(400).json(createResponse('Invalid or expired token'));
         }
 
         logger.info(`[INFO] Code Data: ${JSON.stringify(result)}`);
@@ -46,7 +46,7 @@ export async function validate_code_fp(req, res) {
                 .where('code', code)
                 .delete();
 
-            return res.status(400).json(createResponse(true, 'Token has expired'));
+            return res.status(400).json(createResponse('Token has expired'));
         }
 
         // Perform the action based on the result.action
@@ -55,7 +55,7 @@ export async function validate_code_fp(req, res) {
         return res.sendStatus(204);
     } catch (err) {
         logger.error("[ERROR] Database Error: ", err);
-        return res.status(500).json(createResponse(true, 'Database Error'));
+        return res.status(500).json(createResponse('Database Error'));
     }
 }
 

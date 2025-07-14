@@ -6,6 +6,7 @@ import editSkin from './Skin.js';
 import removediscordconn from './discord.js';
 import changemail from './Mailsend.js';
 import validatecode from './vallidatecode.js';
+import { getUserSessions, terminateSession, terminateAllSessions, getSessionInfo } from './Sessions.js';
 
 
 export default {
@@ -16,5 +17,9 @@ export default {
     editSkin,
     removediscordconn,
     changemail,
-    validatecode
+    validatecode,
+    getUserSessions,
+    getSessionInfo,
+    terminateSession,
+    terminateAllSessions
 };

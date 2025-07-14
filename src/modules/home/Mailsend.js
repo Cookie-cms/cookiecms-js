@@ -1,12 +1,9 @@
 import knex from '../../inc/knex.js';
 import logger from '../../logger.js';
-import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
+// import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import { sendVerificationEmail, sendMailUnlinkNotification } from '../../inc/mail_templates.js';
 import { addaudit, verifyPassword } from '../../inc/common.js';
-import dotenv from 'dotenv';
 
-dotenv.config();
-const JWT_SECRET_KEY = process.env.SECURE_CODE;
 
 function validate(data) {
     data = data.trim();
@@ -20,9 +17,8 @@ export async function changemail(req, res) {
         const { mail, password } = req.body;
         logger.info(mail);
         logger.info(password);
-        const token = req.headers.authorization?.split(' ')[1];
 
-        if (!mail || !password || !token) {
+        if (!mail || !password) {
             return res.status(400).json({ error: true, msg: "Incomplete form data provided." });
         }
 
@@ -30,13 +26,8 @@ export async function changemail(req, res) {
         //     return res.status(403).json({ error: true, msg: "Registration is disabled in demo mode." });
         // }
 
-        // Verify token and get user ID
-        const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
-        if (!status.valid) {
-            return res.status(401).json({ error: true, msg: status.message });
-        }
-
-        const userId = status.data.sub;
+       
+        const userId = req.user.sub;
         const validatedMail = validate(mail);
 
         const user = await knex('users')

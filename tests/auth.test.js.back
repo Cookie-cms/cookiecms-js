@@ -291,3 +291,31 @@ describe('Auth API', () => {
     });
   });
 });
+  describe('Refresh Token', () => {
+    it('should refresh JWT and barrier', async () => {
+      // Сначала логинимся, чтобы получить refreshToken
+      const loginRes = await request(app)
+        .post('/api/auth/login')
+        .send({
+          username: TEST_USER.mail,
+          password: TEST_USER.password
+        });
+
+      expect(loginRes.statusCode).toBe(200);
+      expect(loginRes.body.data).toHaveProperty('refreshToken');
+      const refreshToken = loginRes.body.data.refreshToken;
+
+      // Делаем запрос на refresh
+      const refreshRes = await request(app)
+        .post('/api/auth/refresh')
+        .set('Cookie', `refresh_token=${refreshToken}`)
+        .send();
+
+      expect(refreshRes.statusCode).toBe(200);
+      expect(refreshRes.body.error).toBe(false);
+      expect(refreshRes.body.data).toHaveProperty('jwt');
+      expect(refreshRes.body.data).toHaveProperty('refreshToken');
+      expect(refreshRes.body.data.jwt).not.toBe(loginRes.body.data.jwt);
+      expect(refreshRes.body.data.refreshToken).not.toBe(refreshToken);
+    });
+  });

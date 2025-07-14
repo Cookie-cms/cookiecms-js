@@ -1,12 +1,14 @@
 // knexfile.js
+dotenv.config();
+
 export default {
   client: 'pg',
   connection: {
-    host: 'localhost',
-    port: 5432,
-    user: 'cookiecms',
-    password: 'cookiecms',
-    database: 'cookiecms'
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 5432,
+    user: process.env.DB_USER || 'cookiecms',
+    password: process.env.DB_PASSWORD || 'cookiecms',
+    database: process.env.DB_NAME || 'cookiecms'
   },
   migrations: {
     directory: './migrations'

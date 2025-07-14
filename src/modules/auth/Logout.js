@@ -1,7 +1,6 @@
 import jwt from 'jsonwebtoken';
 import knex from '../../inc/knex.js';
 import logger from '../../logger.js';
-import { isJwtExpiredOrBlacklisted, blacklistJwt } from '../../inc/jwtHelper.js';
 
 import dotenv from 'dotenv';
 
@@ -13,7 +12,7 @@ async function logout(req, res) {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(400).json({ 
             error: true, 
-            msg: "Invalid authorization header format" 
+            msg: "Authorization header not found" 
         });
     }
 
@@ -29,28 +28,14 @@ async function logout(req, res) {
     try {
         // Verify JWT token
         const decoded = jwt.verify(token, JWT_SECRET_KEY);
-        
-        // Check if token is already blacklisted
-        const blacklistedToken = await knex('blacklisted_jwts')
-            .where('jwt', token)
-            .first();
-            
-        if (blacklistedToken) {
-            return res.status(400).json({ 
-                error: true, 
-                msg: "Token is already blacklisted" 
-            });
-        }
 
-        // Get token expiration from decoded JWT
-        const expiration = decoded.exp * 1000; // Convert to milliseconds
+        const sessionId = decoded.sessionId;
+
+        // Remove session from database
+        await knex('sessions')
+            .where('id', sessionId)
+            .delete();
         
-        // Add token to blacklist
-        await knex('blacklisted_jwts')
-            .insert({
-                jwt: token,
-                expiration: expiration
-            });
 
         res.status(200).json({ 
             error: false, 

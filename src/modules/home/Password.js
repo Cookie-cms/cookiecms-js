@@ -4,10 +4,7 @@ import logger from '../../logger.js';
 import { addaudit, verifyPassword, hashPassword } from '../../inc/common.js';
 import { validateData } from '../../middleware/validation.js';
 
-import dotenv from 'dotenv';
 
-dotenv.config();
-const JWT_SECRET_KEY = process.env.SECURE_CODE;
 
 async function validatePassword(userId, password) {
     try {
@@ -56,20 +53,10 @@ async function updatePassword(userId, currentPassword, newPassword) {
 }
 
 async function editPassword(req, res) {
-    const token = req.headers['authorization']?.replace('Bearer ', '') || '';
-    
-    if (!token) {
-        return res.status(401).json({ error: true, msg: 'Invalid JWT', code: 401 });
-    }
 
     try {
-        const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
-    
-        if (!status.valid) {
-            return res.status(401).json({ error: true, msg: status.message, code: 401 });
-        }
-
-        const userId = status.data.sub;
+        
+        const userId = req.user.sub;
         const { currentPassword, newPassword } = req.body;
 
         // Проверяем наличие всех необходимых полей
@@ -78,9 +65,9 @@ async function editPassword(req, res) {
         }
 
         // Проверяем минимальную длину нового пароля
-        if (newPassword.length < 8) {
-            return res.status(400).json({ error: true, msg: 'New password must be at least 8 characters long' });
-        }
+        // if (newPassword.length < 8) {
+        //     return res.status(400).json({ error: true, msg: 'New password must be at least 8 characters long' });
+        // }
 
         const result = await updatePassword(userId, currentPassword, newPassword);
         

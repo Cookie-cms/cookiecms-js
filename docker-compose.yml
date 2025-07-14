@@ -26,6 +26,18 @@ services:
     networks:
       - cookiecms_net
 
+  cookiecms:
+    build: .
+    container_name: cookiecms-app
+    env_file:
+      - .env
+    ports:
+      - '8000:8000'   # Используйте порт из .env
+    depends_on:
+      - postgres
+    networks:
+      - cookiecms_net
+
 volumes:
   postgres_data:
 

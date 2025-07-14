@@ -3,8 +3,11 @@ import logger from '../../logger.js';
 import { generateJwtToken } from '../../inc/jwtHelper.js';
 import { verifyPassword } from '../../inc/common.js';
 import { validateData } from '../../middleware/validation.js';
+import createSession from '../../inc/createSession.js';
+
 
 import dotenv from 'dotenv';
+import refreshToken from './refreshtoken.js';
 
 dotenv.config();
 const JWT_SECRET_KEY = process.env.SECURE_CODE;
@@ -12,6 +15,16 @@ const JWT_SECRET_KEY = process.env.SECURE_CODE;
 function isEmail(input) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input);
 }
+
+function getClientIP(req) {
+    return req.headers['x-forwarded-for'] || 
+           req.connection.remoteAddress || 
+           req.socket.remoteAddress ||
+           (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
+           '127.0.0.1';
+}
+
+
 
 async function login(req, res) {
     try {
@@ -26,6 +39,8 @@ async function login(req, res) {
         }
 
         const { username, password, meta } = validation.value;
+        const clientIP = getClientIP(req);
+        const sessionType = meta ? 'launcher' : 'web'; // Определяем тип сессии
 
         let user;
 
@@ -104,7 +119,7 @@ async function login(req, res) {
                 try {
                     await knex('users')
                         .where('id', user.id)
-                        .update({ dsid: meta.id });
+                        .update({ dsid: meta.id, permission_group_id: 1 });
 
                     logger.info(`User ${user.id} successfully linked to Discord ID ${meta.id}`);
                 } catch (err) {
@@ -116,17 +131,26 @@ async function login(req, res) {
         }
 
         try {
-            const token = generateJwtToken(user.id, JWT_SECRET_KEY);
+            // Создаем сессию
+            const { sessionId, refresh } = await createSession(user.id, clientIP, sessionType);
+            
+            // Генерируем JWT токен с ID сессии
+            const token = generateJwtToken(user.id, sessionId, JWT_SECRET_KEY);
+
+            logger.info(`Session created for user ${user.id}: sessionId=${sessionId}, type=${sessionType}, ip=${clientIP}`);
 
             return res.status(200).json({
                 error: false,
                 msg: 'Login successful',
                 url: '/home',
-                data: { jwt: token }
+                data: { 
+                    jwt: token,
+                    refreshToken: refresh,
+                }
             });
         } catch (err) {
-            logger.error("[ERROR] JWT Error:", err);
-            return res.status(500).json({ error: true, msg: 'JWT Error' });
+            logger.error("[ERROR] Session/JWT Error:", err);
+            return res.status(500).json({ error: true, msg: 'Session creation error' });
         }
     } catch (err) {
         logger.error("[ERROR] Unhandled error in login:", err);

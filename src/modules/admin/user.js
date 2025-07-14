@@ -1,21 +1,20 @@
 import knex from '../../inc/knex.js';
-import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import Mail from 'nodemailer/lib/mailer/index.js';
-import { checkPermission, addaudit } from '../../inc/common.js';
+import { checkPermissionInc, addaudit } from '../../inc/common.js';
 import logger from '../../logger.js';
 
-import dotenv from 'dotenv';
 
-dotenv.config();
-const JWT_SECRET_KEY = process.env.SECURE_CODE;
 
 async function getUserSkins(req, res) {
     try {
         // Check permissions
-        const hasPermission = await checkPermission(req.userId, 'admin.userskins');
-        if (!hasPermission) {
-            return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
-        }
+        if (!await checkPermissionInc(req, 'admin.user')) {
+            return res.status(403).json({
+                error: true,
+                msg: 'Permission denied',
+                code: 403
+            });
+    }
 
         const { ownerid } = req.params;
 
@@ -46,29 +45,29 @@ async function getUserSkins_s(userId) {
 }
 
 export async function user(req, res) {
-    const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
     const { id } = req.params;
 
-    if (!token) {
-        return res.status(401).json({ error: true, msg: 'Invalid JWT', code: 401 });
-    }
 
     try {
-        const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
+       
 
-        if (!status.valid) {
-            return res.status(401).json({ error: true, msg: status.message, code: 401 });
-        }
-        const userId = status.data.sub;
+        if (!await checkPermissionInc(req, 'admin.user')) {
+            return res.status(403).json({
+                error: true,
+                msg: 'Permission denied',
+                code: 403
+            });
+    }
 
-        const hasPermission = await checkPermission(userId, 'admin.user');
-        if (!hasPermission) {
-            return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
-        }
-
-        logger.info(userId);
-        const user = await knex('users').where('id', id).first();
-
+        const user = await knex('users')
+                    .leftJoin('permissions_groups', 'users.permission_group_id', 'permissions_groups.id')
+                    .select(
+                        'users.*',
+                        'permissions_groups.name as group_name',
+                        'permissions_groups.description as group_description'
+                    )
+                    .where('users.id', id)
+                    .first();
         if (!user) {
             return res.status(404).json({ error: true, msg: 'User not found', code: 404 });
         }
@@ -111,7 +110,7 @@ export async function user(req, res) {
 
         const discordid = await knex('users')
             .select('dsid')
-            .where('id', userId)
+            .where('id', id)
             .first();
 
         let discordIntegration = false;
@@ -147,7 +146,8 @@ export async function user(req, res) {
                 Mail_verify: user.mail_verify,
                 Selected_Cape: selectedCape ? selectedCape.Id : 0,
                 Selected_Skin: selectedSkin ? selectedSkin.skin_id : 0,
-                PermLvl: user.perms,
+                Permission_Group_Id: user.permission_group_id,
+                Permission_Group_Name: user.group_name,
                 Capes: capeList,
                 Skins: skinList,
                 Discord_integration: discordIntegration,
@@ -156,6 +156,7 @@ export async function user(req, res) {
             }
         };
 
+        console.log(userdata);
         res.status(200).json(userdata);
     } catch (error) {
         logger.error('Error:', error);
@@ -166,13 +167,13 @@ export async function user(req, res) {
 export async function userupdate(req, res) {
     try {
         // Check permissions
-        const hasPermission = await checkPermission(req.userId, 'admin.useredit');
-        if (!hasPermission) {
-            return res.status(403).json({ 
-                error: true, 
-                msg: 'Insufficient permissions' 
-            });
-        }
+        // const hasPermission = await checkPermission(req.userId, 'admin.useredit');
+        // if (!hasPermission) {
+        //     return res.status(403).json({ 
+        //         error: true, 
+        //         msg: 'Insufficient permissions' 
+        //     });
+        // }
 
         const { id } = req.params;
         const { username, uuid, mail, mail_verify } = req.body;
@@ -240,13 +241,16 @@ export async function userupdate(req, res) {
 
 export async function addcape(req, res) {
     try {
-        // Check permissions
-        const hasPermission = await checkPermission(req.userId, 'admin.users');
-        if (!hasPermission) {
-            return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
-        }
+        const { id } = req.params;
 
-        const { user, cape } = req.body;
+        const user = id;
+        // Check permissions
+        // const hasPermission = await checkPermission(req.userId, 'admin.users');
+        // if (!hasPermission) {
+        //     return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
+        // }
+
+        const { cape } = req.body;
 
         // Insert new capes if provided using Knex
         if (cape && cape.length > 0) {
@@ -274,13 +278,15 @@ export async function addcape(req, res) {
 
 export async function RemoveCape(req, res) {
     try {
-        // Check permissions
-        const hasPermission = await checkPermission(req.userId, 'admin.users');
-        if (!hasPermission) {
-            return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
-        }
+        const { id: user } = req.params;
 
-        const { user, cape } = req.body;
+        // Check permissions
+        // const hasPermission = await checkPermission(req.userId, 'admin.users');
+        // if (!hasPermission) {
+        //     return res.status(403).json({ error: true, msg: 'Insufficient permissions' });
+        // }
+
+        const { cape } = req.body;
 
         // Remove capes if provided using Knex
         if (cape && cape.length > 0) {
@@ -303,5 +309,141 @@ export async function RemoveCape(req, res) {
         });
     }
 }
+
+// Отдельная функция для изменения группы пользователя
+export async function updateUserGroup(req, res) {
+    try {
+        // Check permissions
+        // const hasPermission = await checkPermission(req.userId, 'admin.useredit.group');
+        // if (!hasPermission) {
+        //     return res.status(403).json({ 
+        //         error: true, 
+        //         msg: 'Insufficient permissions' 
+        //     });
+        // }
+
+        const { id } = req.params;
+        const { permission_group_id } = req.body;
+
+        // Validate required fields
+        if (permission_group_id === undefined) {
+            return res.status(400).json({
+                error: true,
+                msg: 'Permission group ID is required'
+            });
+        }
+
+        // Get current user data for audit
+        const currentUser = await knex('users')
+            .select('permission_group_id', 'username')
+            .where('id', id)
+            .first();
+
+        if (!currentUser) {
+            return res.status(404).json({ 
+                error: true, 
+                msg: 'User not found' 
+            });
+        }
+
+        // Validate permission group exists
+        if (permission_group_id !== null) {
+            const groupExists = await knex('permissions_groups')
+                .where('id', permission_group_id)
+                .first();
+
+            if (!groupExists) {
+                return res.status(400).json({
+                    error: true,
+                    msg: 'Invalid permission group'
+                });
+            }
+        }
+
+        // Check if group is actually changing
+        if (permission_group_id === currentUser.permission_group_id) {
+            return res.status(400).json({
+                error: true,
+                msg: 'User already has this permission group'
+            });
+        }
+
+        // Update user group using Knex transaction
+        await knex.transaction(async trx => {
+            // Update user's permission group
+            await trx('users')
+                .where('id', id)
+                .update({
+                    permission_group_id: permission_group_id
+                });
+
+            // Add audit entry for permission group change
+            await addaudit(req.userId, 11, id, 
+                currentUser.permission_group_id, permission_group_id, 'permission_group_id');
+        });
+
+        // Get group name for response
+        let groupName = null;
+        if (permission_group_id !== null) {
+            const group = await knex('permissions_groups')
+                .select('name')
+                .where('id', permission_group_id)
+                .first();
+            groupName = group ? group.name : null;
+        }
+
+        logger.info(`User ${currentUser.username} (ID: ${id}) permission group changed from ${currentUser.permission_group_id} to ${permission_group_id} by user ${req.userId}`);
+
+        return res.json({
+            error: false,
+            msg: 'User permission group updated successfully',
+            data: {
+                user_id: id,
+                old_group_id: currentUser.permission_group_id,
+                new_group_id: permission_group_id,
+                new_group_name: groupName
+            }
+        });
+
+    } catch (error) {
+        logger.error('[ERROR] User group update failed:', error);
+        return res.status(500).json({ 
+            error: true, 
+            msg: 'Failed to update user permission group' 
+        });
+    }
+}
+
+// Отдельная функция для получения доступных групп
+export async function getPermissionGroups(req, res) {
+    try {
+        // Check permissions
+        // const hasPermission = await checkPermission(req.userId, 'admin.groups');
+        // if (!hasPermission) {
+        //     return res.status(403).json({ 
+        //         error: true, 
+        //         msg: 'Insufficient permissions' 
+        //     });
+        // }
+
+        const groups = await knex('permissions_groups')
+            .select('id', 'name', 'description')
+            .orderBy('name');
+
+        return res.json({
+            error: false,
+            msg: 'Permission groups retrieved successfully',
+            data: groups
+        });
+
+    } catch (error) {
+        logger.error('[ERROR] Failed to get permission groups:', error);
+        return res.status(500).json({ 
+            error: true, 
+            msg: 'Failed to get permission groups' 
+        });
+    }
+}
+
 
 export { getUserSkins };

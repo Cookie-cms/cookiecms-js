@@ -10,7 +10,7 @@ dotenv.config();
 
 async function updatepass(req, res) {
     if (process.env.ENV === "demo") {
-        return res.status(403).json(createResponse(true, 'Password reset is disabled in demo mode.'));
+        return res.status(403).json(createResponse('Password reset is disabled in demo mode.'));
     }
 
     // Валидация входных данных
@@ -18,7 +18,7 @@ async function updatepass(req, res) {
     if (!validation.isValid) {
         return res.status(400).json({
             error: true,
-            msg: 'Validation failed',
+            msg: 'Invalid or expired token',
             details: validation.errors
         });
     }
@@ -66,15 +66,15 @@ async function updatepass(req, res) {
                 .delete();
         });
 
-        return res.status(200).json(createResponse(false, 'Password updated successfully'));
+        return res.status(200).json(createResponse('Password updated successfully'));
     } catch (err) {
         logger.error("[ERROR] Database Error: ", err);
         
         if (err.message.includes('Invalid or expired token') || err.message.includes('Token has expired')) {
-            return res.status(400).json(createResponse(true, err.message));
+            return res.status(400).json(createResponse(err.message));
         }
         
-        return res.status(500).json(createResponse(true, 'Database Error'));
+        return res.status(500).json(createResponse('Database Error'));
     }
 }
 

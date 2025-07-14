@@ -4,14 +4,14 @@ const schemas = {
   // Авторизация
   sign: Joi.object({
     username: Joi.string().min(3).max(50).required(),
-    password: Joi.string().min(8).required(),
+    password: Joi.string().min(1).required(),
     meta: Joi.object().optional()
   }),
   
   signup: Joi.object({
     username: Joi.string().alphanum().min(3).max(30).optional(),
-    email: Joi.string().email().required(),
-    password: Joi.string().min(8).pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/).required()
+    mail: Joi.string().email().required(),
+    password: Joi.string().min(1).required()
   }),
 
   // Discord OAuth
@@ -34,7 +34,7 @@ const schemas = {
   // Завершение регистрации
   finishRegister: Joi.object({
     username: Joi.string().alphanum().min(3).max(30).required(),
-    password: Joi.string().min(8).pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/).optional()
+    password: Joi.string().min(1).optional()
   }),
 
   // Восстановление пароля
@@ -53,7 +53,7 @@ const schemas = {
 
   changePassword: Joi.object({
     currentPassword: Joi.string().required(),
-    newPassword: Joi.string().min(8).pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/).required()
+    newPassword: Joi.string().min(1).required()
   }),
 
   uploadSkin: Joi.object({
@@ -73,7 +73,7 @@ const schemas = {
 
   resetPassword: Joi.object({
     code: Joi.string().length(6).alphanum().required(),
-    password: Joi.string().min(8).pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/).required()
+    password: Joi.string().min(1).required()
   })
 };
 

@@ -1,10 +1,10 @@
-import express from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import knex from '../../inc/knex.js';
 import { getSkinData } from '../skins/gravitlauncher.js';
+import { verifyPassword } from '../../inc/common.js';
+import crypto from 'crypto';
 
-const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'secret_key';
 const BEARER_TOKEN = process.env.BEARER_TOKEN || 'YOUR_BEARER_TOKEN';
 
@@ -50,6 +50,7 @@ export async function gl_authorize(req, res) {
   if (!login || !password) return res.status(400).json(gl_error('Missing credentials'));
 
   const user = await knex('users').where({ username: login }).first();
+  // console.log('User found:', user);
   if (!user) return res.status(401).json(gl_error('Invalid credentials'));
 
   // 2FA: если у пользователя включен 2FA, но код не передан
@@ -61,11 +62,11 @@ export async function gl_authorize(req, res) {
   //   return res.status(401).json(gl_error('Invalid 2FA code'));
   // }
 
-  const valid = await bcrypt.compare(password, user.password);
+  const valid = await verifyPassword(password, user.password);
   if (!valid) return res.status(401).json(gl_error('Invalid credentials'));
 
   const accessToken = jwt.sign({ sub: user.id }, JWT_SECRET, { expiresIn: '1h' });
-  const refreshToken = jwt.sign({ sub: user.id }, JWT_SECRET, { expiresIn: '7d' });
+  const refreshToken = crypto.randomBytes(32).toString('hex'); // Генерация случайного refresh token
   const expire = 3600;
 
   const userObj = await gl_makeUser(user);
@@ -167,11 +168,11 @@ export async function gl_getHardwareByKey(req, res) {
     const { publicKey } = req.body;
     if (!publicKey) return res.status(400).json({ error: true, msg: 'Missing publicKey' });
 
-    // publickey хранится как строка (base64), без Buffer
-    const hwid = await knex('hwids').where({ publickey: publicKey }).first();
-    if (!hwid) return res.status(404).json({ error: true, msg: 'Hardware not found' });
+    // Поиск устройства по publickey
+    const device = await knex('devices').where({ publickey: publicKey }).first();
+    if (!device) return res.status(404).json({ error: true, msg: 'Device not found' });
 
-    res.status(200).json({ id: hwid.id, ...hwid });
+    res.status(200).json({ id: device.id, ...device });
 }
 
 // --- /gravit/gethardwarebydata ---
@@ -179,7 +180,7 @@ export async function gl_getHardwareByData(req, res) {
     const { info } = req.body;
     if (!info) return res.status(400).json({ error: true, msg: 'Missing info' });
 
-    const hwid = await knex('hwids')
+    const device = await knex('devices')
         .where({
             hwDiskId: info.hwDiskId,
             baseboardSerialNumber: info.baseboardSerialNumber,
@@ -187,9 +188,9 @@ export async function gl_getHardwareByData(req, res) {
         })
         .first();
 
-    if (!hwid) return res.status(404).json({ error: true, msg: 'Hardware not found' });
+    if (!device) return res.status(404).json({ error: true, msg: 'Device not found' });
 
-    res.status(200).json({ id: hwid.id, ...hwid });
+    res.status(200).json({ id: device.id, ...device });
 }
 
 // --- /gravit/createhardware ---
@@ -197,8 +198,8 @@ export async function gl_createHardware(req, res) {
     const { info, publicKey } = req.body;
     if (!info || !publicKey) return res.status(400).json({ error: true, msg: 'Missing info or publicKey' });
 
-    // Проверяем, есть ли уже такой HWID
-    let hwidRow = await knex('hwids')
+    // Проверяем, есть ли уже такое устройство
+    let deviceRow = await knex('devices')
         .where({
             hwDiskId: info.hwDiskId,
             baseboardSerialNumber: info.baseboardSerialNumber,
@@ -206,9 +207,9 @@ export async function gl_createHardware(req, res) {
         })
         .first();
 
-    if (!hwidRow) {
-        // Создаём новую запись (все поля как строки/числа/boolean)
-        const [id] = await knex('hwids')
+    if (!deviceRow) {
+        // Создаём новую запись
+        const [id] = await knex('devices')
             .insert({
                 publickey: publicKey,
                 hwDiskId: info.hwDiskId,
@@ -224,48 +225,45 @@ export async function gl_createHardware(req, res) {
                 banned: false
             })
             .returning('id');
-        hwidRow = await knex('hwids').where({ id }).first();
+        deviceRow = await knex('devices').where({ id }).first();
     }
-    res.status(201).json({ id: hwidRow.id, ...hwidRow });
+    res.status(201).json({ id: deviceRow.id, ...deviceRow });
 }
 
 // --- /gravit/connectuserhardware ---
 export async function gl_connectUserHardware(req, res) {
-    // Ожидается: { userSession, hardware } или { userId, hardwareId }
-    let userId, hardwareId;
+    // Ожидается: { userSession, device } или { userId, deviceId }
+    let userId, deviceId;
 
-    // Универсальный парсер для разных форматов
-    if (req.body.userId && req.body.hardwareId) {
+    if (req.body.userId && req.body.deviceId) {
         userId = req.body.userId;
-        hardwareId = req.body.hardwareId;
-    } else if (req.body.userSession && req.body.hardware) {
-        // Если приходит объект userSession с id
+        deviceId = req.body.deviceId;
+    } else if (req.body.userSession && req.body.device) {
         userId = req.body.userSession.id || req.body.userSession.user?.id;
-        hardwareId = req.body.hardware.id;
+        deviceId = req.body.device.id;
     } else {
-        return res.status(400).json({ error: true, msg: 'Missing userId or hardwareId' });
+        return res.status(400).json({ error: true, msg: 'Missing userId or deviceId' });
     }
 
-    if (!userId || !hardwareId) {
-        return res.status(400).json({ error: true, msg: 'Missing userId or hardwareId' });
+    if (!userId || !deviceId) {
+        return res.status(400).json({ error: true, msg: 'Missing userId or deviceId' });
     }
 
     try {
-        // Привязываем hardware к пользователю (например, поле hwidId в users)
-        await knex('users').where({ id: userId }).update({ hwidId: hardwareId });
+        await knex('users').where({ id: userId }).update({ hwidId: deviceId });
         res.status(201).json({ msg: 'Connected' });
     } catch (e) {
-        console.error('connectUserAndHardware error:', e);
-        res.status(500).json({ error: true, msg: 'Failed to connect user and hardware' });
+        console.error('connectUserAndDevice error:', e);
+        res.status(500).json({ error: true, msg: 'Failed to connect user and device' });
     }
 }
 
 // --- /gravit/addpublickey ---
 export async function gl_addPublicKey(req, res) {
-    const { hardwareId, publicKey } = req.body;
-    if (!hardwareId || !publicKey) return res.status(400).json({ error: true, msg: 'Missing hardwareId or publicKey' });
+    const { deviceId, publicKey } = req.body;
+    if (!deviceId || !publicKey) return res.status(400).json({ error: true, msg: 'Missing deviceId or publicKey' });
 
-    await knex('hwids').where({ id: hardwareId }).update({ publickey: publicKey });
+    await knex('devices').where({ id: deviceId }).update({ publickey: publicKey });
     res.status(201).json({ msg: 'Public key added' });
 }
 
@@ -275,38 +273,35 @@ export async function gl_getHardwareById(req, res) {
     if (typeof id === 'object' && id !== null) id = id.id;
     if (!id) return res.status(400).json({ error: true, msg: 'Missing id' });
 
-    const hwid = await knex('hwids').where({ id: Number(id) }).first();
-    if (!hwid) return res.status(404).json({ error: true, msg: 'Hardware not found' });
+    const device = await knex('devices').where({ id: Number(id) }).first();
+    if (!device) return res.status(404).json({ error: true, msg: 'Device not found' });
 
-    res.status(200).json({ id: hwid.id, ...hwid });
+    res.status(200).json({ id: device.id, ...device });
 }
 
 // --- /gravit/getusersbyhardware ---
 export async function gl_getUsersByHardware(req, res) {
-    const { hardwareId } = req.body;
-    if (!hardwareId) return res.status(400).json({ error: true, msg: 'Missing hardwareId' });
+    const { deviceId } = req.body;
+    if (!deviceId) return res.status(400).json({ error: true, msg: 'Missing deviceId' });
 
-    const users = await knex('users').where({ hwidId: hardwareId });
+    const users = await knex('users').where({ hwidId: deviceId });
     res.status(200).json({ users });
 }
 
 // --- /gravit/banhardware ---
 export async function gl_banHardware(req, res) {
-    const { hardwareId } = req.body;
-    if (!hardwareId) return res.status(400).json({ error: true, msg: 'Missing hardwareId' });
+    const { deviceId } = req.body;
+    if (!deviceId) return res.status(400).json({ error: true, msg: 'Missing deviceId' });
 
-    await knex('hwids').where({ id: hardwareId }).update({ banned: true });
-    res.status(201).json({ msg: 'Hardware banned' });
+    await knex('devices').where({ id: deviceId }).update({ banned: true });
+    res.status(201).json({ msg: 'Device banned' });
 }
 
 // --- /gravit/unbanhardware ---
 export async function gl_unbanHardware(req, res) {
-    const { hardwareId } = req.body;
-    if (!hardwareId) return res.status(400).json({ error: true, msg: 'Missing hardwareId' });
+    const { deviceId } = req.body;
+    if (!deviceId) return res.status(400).json({ error: true, msg: 'Missing deviceId' });
 
-    await knex('hwids').where({ id: hardwareId }).update({ banned: false });
-    res.status(201).json({ msg: 'Hardware unbanned' });
+    await knex('devices').where({ id: deviceId }).update({ banned: false });
+    res.status(201).json({ msg: 'Device unbanned' });
 }
-
-
-export default router;

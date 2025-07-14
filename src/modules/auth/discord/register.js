@@ -1,3 +1,4 @@
+
 import knex from '../../../inc/knex.js';
 import { isJwtExpiredOrBlacklisted, generateJwtToken } from '../../../inc/jwtHelper.js';
 import { addaudit, createResponse } from '../../../inc/common.js';
@@ -9,14 +10,14 @@ import dotenv from 'dotenv';
 dotenv.config();
 const JWT_SECRET_KEY = process.env.SECURE_CODE;
 
-async function registerUser(userResponse, res) {
-    const token = userResponse.headers['authorization'] ? userResponse.headers['authorization'].replace('Bearer ', '') : '';
+async function registerUser(userResponse, res, req) {
 
     try {
+
         // Generate random code and expiration time
         const randomCode = Math.floor(Math.random() * 99) + 1;
         const timexp = Math.floor(Date.now() / 1000) + 3600;
-        
+
         // Check if discord info exists and update or insert
         const discordInfo = await knex('discord')
             .where('userid', userResponse.id)
@@ -44,19 +45,16 @@ async function registerUser(userResponse, res) {
         }
 
         // Check if user is logged in
-        if (token) {
-            const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
-            if (status.valid) {
-                // Update user's Discord connection
-                await knex('users')
-                    .where('id', status.data.sub)
-                    .update({ dsid: userResponse.id });
+        if (req && req.user && req.user.sub) {
+            // Update user's Discord connection
+            await knex('users')
+                .where('id', req.user.sub)
+                .update({ dsid: userResponse.id });
 
-                // Add audit log
-                await addaudit(status.data.sub, 9, status.data.sub, null, userResponse.id, 'dsid');
-                
-                return res.status(200).json(createResponse(false, 'Successfully connected account', "/home"));
-            }
+            // Add audit log
+            await addaudit(req.user.sub, 9, req.user.sub, null, userResponse.id, 'dsid');
+
+            return res.status(200).json(createResponse('Successfully connected account', "/home"));
         }
 
         // Check if user exists
@@ -72,7 +70,7 @@ async function registerUser(userResponse, res) {
                 avatar: userResponse.avatar,
                 conn_id: randomCode,
             };
-            res.status(200).json(createResponse(false, 'Successfully logged in', "/home", userData));
+            res.status(200).json(createResponse('Successfully logged in', "/home", userData));
         } else {
             const registerData = {
                 userid: userResponse.id,
@@ -80,7 +78,7 @@ async function registerUser(userResponse, res) {
                 avatar: userResponse.avatar,
                 conn_id: randomCode,
             };
-            res.status(404).json(createResponse(true, 'User not found, do you want to create or link?', "/home", registerData));
+            res.status(404).json(createResponse('User not found, do you want to create or link?', "/home", registerData));
         }
     } catch (error) {
         logger.error('Error during user registration:', error);

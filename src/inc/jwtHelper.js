@@ -11,17 +11,7 @@ export async function isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY) {
         // Verify and decode JWT
         const decoded = jwt.verify(token, JWT_SECRET_KEY);
         logger.debug('Decoded Token:', decoded);
-
-        // If verification fails, the function would have thrown an error already.
-
-        // Check if token is blacklisted
-        const blacklistedToken = await knex('blacklisted_jwts')
-            .where('jwt', token)
-            .first();
-
-        if (blacklistedToken) {
-            return { valid: false, message: 'Token is blacklisted' };
-        }
+        
 
         return { valid: true, data: decoded };
 
@@ -38,11 +28,12 @@ export async function isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY) {
     }
 }
 
-export function generateJwtToken(user, JWT_SECRET_KEY) {
+export function generateJwtToken(user, sid, JWT_SECRET_KEY) {
     logger.info('Generating JWT token for user:', user);
     const payload = {
         iss: 'cookiecms',
         sub: user,
+        sessionId: sid,
         iat: Math.floor(Date.now() / 1000),
         exp: Math.floor(Date.now() / 1000) + 3600,
     };
@@ -50,17 +41,4 @@ export function generateJwtToken(user, JWT_SECRET_KEY) {
     return jwt.sign(payload, JWT_SECRET_KEY, { algorithm: 'HS256' });
 }
 
-export async function blacklistJwt(token, expirationTime) {
-    try {
-        await knex('blacklisted_jwts').insert({
-            jwt: token,
-            expiration: expirationTime
-        });
-        return true;
-    } catch (error) {
-        logger.error('Error blacklisting token:', error);
-        return false;
-    }
-}
-
-export default { isJwtExpiredOrBlacklisted, generateJwtToken, blacklistJwt };
+export default { isJwtExpiredOrBlacklisted, generateJwtToken };

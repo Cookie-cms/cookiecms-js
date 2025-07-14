@@ -42,16 +42,46 @@ export async function getSkinFile(req, res) {
             )
             .first();
 
-        // Обязательно добавьте эту проверку
-        if (!skin || !skin.uuid) {
-            return res.status(404).send('Skin not found');
+        let filePath;
+        
+        // Если скин найден, пробуем использовать его
+        if (skin && skin.uuid) {
+            filePath = path.join('uploads/skins/', `${skin.uuid}.png`);
+            
+            // Проверяем, существует ли файл
+            if (fs.existsSync(filePath)) {
+                return sendFile(res, filePath);
+            } else {
+                logger.warn(`Skin file not found for UUID ${skin.uuid}, using default skin`);
+            }
+        } else {
+            logger.warn(`Skin not found in database for user UUID ${uuid}, using default skin`);
         }
-
-        const filePath = path.join('uploads/skins/', `${skin.uuid}.png`);
-        return sendFile(res, filePath);
+        
+        // Используем дефолтный скин
+        const defaultSkinPath = path.join('uploads/skins/', 'default.png');
+        
+        // Проверяем, существует ли дефолтный скин
+        if (fs.existsSync(defaultSkinPath)) {
+            return sendFile(res, defaultSkinPath);
+        } else {
+            logger.error('Default skin file not found');
+            return res.status(404).send('Default skin not found');
+        }
 
     } catch (error) {
         logger.error('Error getting skin:', error);
+        
+        // В случае ошибки также пробуем вернуть дефолтный скин
+        try {
+            const defaultSkinPath = path.join('uploads/skins/', 'default.png');
+            if (fs.existsSync(defaultSkinPath)) {
+                return sendFile(res, defaultSkinPath);
+            }
+        } catch (fallbackError) {
+            logger.error('Error sending default skin:', fallbackError);
+        }
+        
         res.status(500).send('Internal server error');
     }
 }

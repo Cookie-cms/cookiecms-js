@@ -1,12 +1,8 @@
 import knex from '../../inc/knex.js';
 import bcrypt from 'bcrypt';
-import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import logger from '../../logger.js';
 import { addaudit } from '../../inc/common.js';
-import dotenv from 'dotenv';
 
-dotenv.config();
-const JWT_SECRET_KEY = process.env.SECURE_CODE;
 
 async function validatePassword(userId, password) {
     try {
@@ -59,20 +55,8 @@ async function updateUsername(userId, newUsername, currentPassword) {
 }
 
 async function username(req, res) {
-    const token = req.headers['authorization']?.replace('Bearer ', '') || '';
-    
-    if (!token) {
-        return res.status(401).json({ error: true, msg: 'Invalid JWT', code: 401 });
-    }
-
     try {
-        const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
-    
-        if (!status.valid) {
-            return res.status(401).json({ error: true, msg: status.message, code: 401 });
-        }
-
-        const userId = status.data.sub;
+        const userId = req.user.sub;
         const { username, password } = req.body;
 
         // Проверка входных данных

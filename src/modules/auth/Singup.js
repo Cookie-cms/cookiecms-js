@@ -11,26 +11,36 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export async function signup(req, res) {
-    if (process.env.ENV === "demo") {
-        return res.status(403).json({ error: true, msg: "Registration is disabled in demo mode." });
-    }
+    // if (process.env.ENV === "demo") {
+    //     return res.status(403).json({ error: true, msg: "Registration is disabled in demo mode." });
+    // }
 
     // Валидация входных данных
     const validation = validateData(req.body, 'signup');
     if (!validation.isValid) {
+        // Более конкретные сообщения для конкретных ошибок
+        let errorMsg = 'Validation failed';
+        if (validation.errors && validation.errors.length > 0) {
+            if (validation.errors[0].field === 'mail' && validation.errors[0].message.includes('valid')) {
+                errorMsg = "Invalid email format";
+            } else if (validation.errors[0].field === 'password' && validation.errors[0].message.includes('length')) {
+                errorMsg = "Password must be at least 8 characters long";
+            }
+        }
+        
         return res.status(400).json({
             error: true,
-            msg: 'Validation failed',
+            msg: errorMsg,
             details: validation.errors
         });
     }
 
-    const { email, password } = validation.value;
+    const { mail, password } = validation.value;
 
     try {
         // Check if email already exists
         const existingUser = await knex('users')
-            .whereRaw('LOWER(mail) = LOWER(?)', [email])
+            .whereRaw('LOWER(mail) = LOWER(?)', [mail])
             .first();
 
         if (existingUser) {
@@ -44,7 +54,7 @@ export async function signup(req, res) {
             // Insert new user
             const [userId] = await trx('users')
                 .insert({
-                    mail: email,
+                    mail: mail,
                     password: hashedPassword
                 })
                 .returning('id')

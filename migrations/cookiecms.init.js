@@ -20,15 +20,6 @@ export function up(knex) {
       table.index('time');
     }),
 
-    // Blacklisted JWTs
-    knex.schema.createTable('blacklisted_jwts', table => {
-      table.increments('id');
-      table.text('jwt').notNullable();
-      table.bigInteger('expiration');
-      
-      table.index('expiration');
-    }),
-
     // Cloaks Library
     knex.schema.createTable('cloaks_lib', table => {
       table.string('uuid', 255).primary();
@@ -43,29 +34,27 @@ export function up(knex) {
       table.string('mail', 255);
       table.integer('mail_verify').defaultTo(0);
       table.uuid('uuid');
-      table.string('password', 255);
-      table.integer('perms').notNullable().defaultTo(1);
-      table.string('accessToken', 32);
       table.string('serverID', 41);
+      table.string('password', 255);
       table.bigInteger('hwidId');
     }),
 
     // HWIDs
-    knex.schema.createTable('hwids', table => {
-    table.bigIncrements('id').primary(); // исправлено!
-    table.string('publickey'); // лучше хранить как строку, если не бинарь
-    table.string('hwDiskId', 255);
-    table.string('baseboardSerialNumber', 255);
-    table.string('graphicCard', 255);
-    table.string('displayId'); // лучше строка, если не бинарь
-    table.integer('bitness');
-    table.bigInteger('totalMemory');
-    table.integer('logicalProcessors');
-    table.integer('physicalProcessors');
-    table.bigInteger('processorMaxFreq');
-    table.boolean('battery').notNullable().defaultTo(false);
-    table.boolean('banned').notNullable().defaultTo(false);
-  }),
+  //   knex.schema.createTable('hwids', table => {
+  //   table.bigIncrements('id').primary(); // исправлено!
+  //   table.string('publickey'); // лучше хранить как строку, если не бинарь
+  //   table.string('hwDiskId', 255);
+  //   table.string('baseboardSerialNumber', 255);
+  //   table.string('graphicCard', 255);
+  //   table.string('displayId'); // лучше строка, если не бинарь
+  //   table.integer('bitness');
+  //   table.bigInteger('totalMemory');
+  //   table.integer('logicalProcessors');
+  //   table.integer('physicalProcessors');
+  //   table.bigInteger('processorMaxFreq');
+  //   table.boolean('battery').notNullable().defaultTo(false);
+  //   table.boolean('banned').notNullable().defaultTo(false);
+  // }),
 
     // Job Schedule
     knex.schema.createTable('job_schedule', table => {
@@ -142,9 +131,9 @@ export function up(knex) {
       }),
 
       // Add foreign key from users to hwids
-      knex.schema.alterTable('users', table => {
-        table.foreign('hwidId').references('hwids.id').onDelete('SET NULL');
-      })
+      // knex.schema.alterTable('users', table => {
+      //   table.foreign('hwidId').references('hwids.id').onDelete('SET NULL');
+      // })
     ]);
   });
 }
@@ -163,7 +152,7 @@ export function down(knex) {
     knex.schema.dropTableIfExists('skins_library'),
     knex.schema.dropTableIfExists('job_schedule'),
     knex.schema.dropTableIfExists('users'),
-    knex.schema.dropTableIfExists('hwids'),
+    // knex.schema.dropTableIfExists('hwids'),
     knex.schema.dropTableIfExists('cloaks_lib'),
     knex.schema.dropTableIfExists('blacklisted_jwts'),
     knex.schema.dropTableIfExists('audit_log')

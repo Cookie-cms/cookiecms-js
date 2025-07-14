@@ -1,7 +1,7 @@
 import { uploadCape, updateCape, deleteCape } from './Cape.js';
 import audit from './audit.js';
 import users from './users.js';
-import {user} from './user.js';
+import {user,userupdate, updateUserGroup, getPermissionGroups, addcape, RemoveCape } from './user.js';
 import allcapes from './allcapes.js';
 import getSkins from './skins.js';
 import {
@@ -19,6 +19,9 @@ import {
     } from './role.js';
 import { skins, allusers, userRegistrationStats } from './metrics.js';
 import { get } from 'http';
+
+import { getUserDevices, banDevice, unbanDevice, deleteDevice } from './hwidmgr.js';
+import getUsersDevices from './hwids.js';
 
 
 export default {
@@ -43,5 +46,15 @@ export default {
     deleteRole,
     assignPermissionToRole,
     revokePermissionFromRole,
-    getExtendedRolePermissions
+    getExtendedRolePermissions,
+    userupdate,
+    updateUserGroup,
+    getPermissionGroups,
+    addcape,
+    RemoveCape,
+    getUserDevices,
+    banDevice,
+    unbanDevice,
+    deleteDevice,
+    getUsersDevices
 };

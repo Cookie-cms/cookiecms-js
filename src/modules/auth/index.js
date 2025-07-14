@@ -10,6 +10,7 @@ import generateAuthLink from './discordlink.js';
 import { discordCallback } from './callback.js';
 import requestVerificationCode from './Requestvc.js';
 import { discordcreate } from './discordcreate.js';
+import refreshToken from './refreshtoken.js';
 
 export default {
     login,
@@ -23,5 +24,6 @@ export default {
     discordCallback,
     validate_code_fp,
     updatepass,
-    discordcreate
+    discordcreate,
+    refreshToken
 };

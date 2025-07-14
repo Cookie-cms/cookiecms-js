@@ -5,11 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import sharp from 'sharp';
 import knex from '../../inc/knex.js';
 import logger from '../../logger.js';
-import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
-import dotenv from 'dotenv';
 
-dotenv.config();
-const JWT_SECRET_KEY = process.env.SECURE_CODE;
 
 // Configure multer storage
 const storage = multer.diskStorage({
@@ -37,32 +33,25 @@ const upload = multer({
 
 async function uploadSkinRoute(req, res) {
   try {
-    const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
+  
 
-    if (!token) {
-      return res.status(401).json({ error: true, msg: 'Authentication required' });
-    }
+    const userId = req.user.sub;
+    
+    console.log(req.user)
 
-    const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
-    if (!status.valid) {
-      return res.status(401).json({ error: true, msg: status.message });
-    }
+    // // Check if user exists and has permissions
+    // const user = await knex('users')
+    //   .where('id', userId)
+    //   .first('perms');
 
-    const userId = status.data.sub;
-
-    // Check if user exists and has permissions
-    const user = await knex('users')
-      .where('id', userId)
-      .first('perms');
-
-    if (!user) {
-      return res.status(404).json({ error: true, msg: 'User not found' });
-    }
+    // if (!user) {
+    //   return res.status(404).json({ error: true, msg: 'User not found' });
+    // }
 
     // // Check if user has permission to upload skins
-    // if (!config.permissions[user.perms]?.includes('profile.changeskin')) {
-    //   return res.status(403).json({ error: true, msg: '' });
-    // }
+    if (!req.user.permissions.includes('profile.changeskin')) {
+      return res.status(403).json({ error: true, msg: 'You do not have permission to upload skins' });
+    }
 
     upload(req, res, async function (err) {
       if (err instanceof multer.MulterError) {
@@ -81,10 +70,10 @@ async function uploadSkinRoute(req, res) {
         const slim = req.body.slim === 'true' || req.body.slim === true;
         
         // Check HD permissions
-        // if (hd && !config.permissions[user.perms]?.includes('profile.changeskinHD')) {
-        //   await fs.unlink(req.file.path);
-        //   return res.status(403).json({ error: true, msg: 'No permission to upload HD skins' });
-        // }
+        if (hd && !req.user.permissions.includes('profile.changeskinHD')) {
+          await fs.unlink(req.file.path);
+          return res.status(403).json({ error: true, msg: 'No permission to upload HD skins' });
+        }
 
         logger.info(`User ${userId} uploading skin: ${req.file.originalname}, HD: ${hd}, Slim: ${slim}`);
 

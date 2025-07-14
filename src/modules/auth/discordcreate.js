@@ -7,9 +7,25 @@ import sendEmbed from '../../inc/common.js';
 import { generateJwtToken } from '../../inc/jwtHelper.js';
 import { addaudit } from '../../inc/common.js';
 import { validateData } from '../../middleware/validation.js';
+import crypto from 'crypto';
+import createSession from '../../inc/createSession.js';
 
 import dotenv from 'dotenv';
 dotenv.config();
+
+
+function getClientIP(req) {
+    return req.headers['x-forwarded-for'] || 
+           req.connection.remoteAddress || 
+           req.socket.remoteAddress ||
+           (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
+           '127.0.0.1';
+}
+
+function generateBarrierToken() {
+    return crypto.randomBytes(32).toString('hex');
+}
+
 
 export async function discordcreate(req, res) {
     // Валидация входных данных
@@ -27,6 +43,12 @@ export async function discordcreate(req, res) {
 
     try {
         const JWT_SECRET_KEY = process.env.SECURE_CODE;
+        
+        // Проверяем наличие JWT секрета
+        if (!JWT_SECRET_KEY) {
+            logger.error('[ERROR] JWT_SECRET_KEY (SECURE_CODE) is not defined in environment variables');
+            return res.status(500).json({ error: true, msg: 'Server configuration error' });
+        }
  
         const discord_link = await knex('discord')
             .where('userid', id)
@@ -38,6 +60,7 @@ export async function discordcreate(req, res) {
         }
 
         let userId;
+        const clientIP = getClientIP(req);
 
         // Using a transaction for data consistency
         await knex.transaction(async (trx) => {
@@ -60,14 +83,22 @@ export async function discordcreate(req, res) {
         });
         
         logger.info('User ID:', userId);
-        const token = generateJwtToken(userId, JWT_SECRET_KEY);
+        
+        // Создаем сессию
+        const { sessionId, barrier } = await createSession(userId, clientIP, 'web');
+        
+        // Генерируем JWT токен с ID сессии
+        const token = generateJwtToken(userId, sessionId, JWT_SECRET_KEY);
+
+        logger.info(`Discord registration session created for user ${userId}: sessionId=${sessionId}, ip=${clientIP}`);
 
         return res.status(200).json({ 
             error: false, 
             msg: "Registration successful", 
             url: "/home",  // Optional redirect URL
             data: {
-                jwt: token  // The JWT token for authenticated requests
+                jwt: token,  // The JWT token for authenticated requests
+                refre: barrier,  // The session barrier token
             }
         });
     } catch (err) {

@@ -3,11 +3,8 @@ import path from 'path';
 import knex from '../../inc/knex.js';
 import jwt from 'jsonwebtoken';
 import logger from '../../logger.js';
-import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import dotenv from 'dotenv';
 
-dotenv.config();
-const JWT_SECRET_KEY = process.env.SECURE_CODE;
 
 async function removeSkin(userId, skinId) {
     // Check if skin exists and is owned by user
@@ -82,20 +79,10 @@ async function selectskin(userId, skinId) {
 }
 
 async function editSkin(req, res) {
-    const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
-
-    if (!token) {
-        return res.status(401).json({ error: true, msg: 'Invalid token or session expired.' });
-    }
-
+  
     try {
-        const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
-
-        if (!status.valid) {
-            return res.status(401).json({ error: true, msg: status.message });
-        }
-
-        const userId = status.data.sub;
+    
+        const userId = req.user.sub;
         const { skinid, name = null, slim = null, cloakid = null } = req.body;
 
         if (req.method === 'PUT') {

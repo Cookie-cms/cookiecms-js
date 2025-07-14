@@ -1,15 +1,17 @@
 import knex from '../../inc/knex.js';
+import { checkPermissionInc } from '../../inc/common.js';
 
 // Middleware для проверки авторизации
-export function requireAdmin(req, res, next) {
-  if (!checkPermission(req.user, 'admin.access')) {
-    return res.status(403).json({ error: 'Forbidden' });
-  }
-  next();
-}
 
 // Получить расширенный список всех ролей и разрешений
 export async function getExtendedRolePermissions(req, res) {
+  if (!await checkPermissionInc(req, 'admin.settings')) {
+    return res.status(403).json({
+      error: true,
+      msg: 'Permission denied',
+      code: 403
+    });
+  }
   try {
     const groups = await knex('permissions_groups').select('*');
     const permissions = await knex('permissions').select('*');
@@ -42,6 +44,13 @@ export async function getExtendedRolePermissions(req, res) {
 
 // Получить список всех ролей
 export async function getRoles(req, res) {
+  if (!await checkPermissionInc(req, 'admin.settings')) {
+    return res.status(403).json({
+      error: true,
+      msg: 'Permission denied',
+      code: 403
+    });
+  }
   try {
     const roles = await knex('permissions_groups').select('*');
     res.json({ roles });
@@ -53,6 +62,13 @@ export async function getRoles(req, res) {
 
 // Создать новую роль
 export async function createRole(req, res) {
+  if (!await checkPermissionInc(req, 'admin.settings')) {
+    return res.status(403).json({
+      error: true,
+      msg: 'Permission denied',
+      code: 403
+    });
+  }
   try {
     const { name, description, level, is_default } = req.body;
     const [id] = await knex('permissions_groups')
@@ -67,6 +83,13 @@ export async function createRole(req, res) {
 
 // Обновить существующую роль
 export async function updateRole(req, res) {
+  if (!await checkPermissionInc(req, 'admin.settings')) {
+    return res.status(403).json({
+      error: true,
+      msg: 'Permission denied',
+      code: 403
+    });
+  }
   try {
     const { id } = req.params;
     const { name, description, level, is_default } = req.body;
@@ -91,6 +114,13 @@ export async function updateRole(req, res) {
 
 // Удалить роль
 export async function deleteRole(req, res) {
+  if (!await checkPermissionInc(req, 'admin.settings')) {
+    return res.status(403).json({
+      error: true,
+      msg: 'Permission denied',
+      code: 403
+    });
+  }
   try {
     const { id } = req.params;
     // Проверка: есть ли пользователи с этой ролью
@@ -109,6 +139,13 @@ export async function deleteRole(req, res) {
 
 // Получить список всех разрешений
 export async function getPermissions(req, res) {
+  if (!await checkPermissionInc(req, 'admin.settings')) {
+    return res.status(403).json({
+      error: true,
+      msg: 'Permission denied',
+      code: 403
+    });
+  }
   try {
     const permissions = await knex('permissions').select('*');
     res.json({ permissions });
@@ -120,6 +157,13 @@ export async function getPermissions(req, res) {
 
 // Создать новое разрешение
 export async function createPermission(req, res) {
+  if (!await checkPermissionInc(req, 'admin.settings')) {
+    return res.status(403).json({
+      error: true,
+      msg: 'Permission denied',
+      code: 403
+    });
+  }
   try {
     const { name, category, description } = req.body;
     const [id] = await knex('permissions')
@@ -134,6 +178,13 @@ export async function createPermission(req, res) {
 
 // Обновить разрешение
 export async function updatePermission(req, res) {
+  if (!await checkPermissionInc(req, 'admin.settings')) {
+    return res.status(403).json({
+      error: true,
+      msg: 'Permission denied',
+      code: 403
+    });
+  }
   try {
     const { id } = req.params;
     const { name, category, description } = req.body;
@@ -148,6 +199,13 @@ export async function updatePermission(req, res) {
 
 // Удалить разрешение
 export async function deletePermission(req, res) {
+  if (!await checkPermissionInc(req, 'admin.settings')) {
+    return res.status(403).json({
+      error: true,
+      msg: 'Permission denied',
+      code: 403
+    });
+  }
   try {
     const { id } = req.params;
     // Проверка: используется ли разрешение ролями
@@ -166,8 +224,22 @@ export async function deletePermission(req, res) {
 
 // Назначить разрешение роли
 export async function assignPermissionToRole(req, res) {
+  if (!await checkPermissionInc(req, 'admin.settings')) {
+    return res.status(403).json({
+      error: true,
+      msg: 'Permission denied',
+      code: 403
+    });
+  }
   try {
     const { roleId, permissionId } = req.params;
+    
+    console.log(`Assigning permission ${permissionId} to role ${roleId}`);
+    
+    if (!roleId || !permissionId) {
+      return res.status(400).json({ error: 'roleId and permissionId are required' });
+    }
+    
     // Проверка существования роли и разрешения
     const role = await knex('permissions_groups').where({ id: roleId }).first();
     const perm = await knex('permissions').where({ id: permissionId }).first();
@@ -178,7 +250,7 @@ export async function assignPermissionToRole(req, res) {
       .where({ group_id: roleId, permission_id: permissionId }).first();
     if (exists) {
       return res.json({
-        message: 'Permission assigned to role successfully',
+        message: 'Permission already assigned to role',
         status: 'already_exists'
       });
     }
@@ -189,13 +261,20 @@ export async function assignPermissionToRole(req, res) {
       status: 'assigned'
     });
   } catch (error) {
-    console.error(error);
+    console.error('Error assigning permission to role:', error);
     res.status(500).json({ error: 'Failed to assign permission to role' });
   }
 }
 
 // Отозвать разрешение у роли
 export async function revokePermissionFromRole(req, res) {
+  if (!await checkPermissionInc(req, 'admin.settings')) {
+    return res.status(403).json({
+      error: true,
+      msg: 'Permission denied',
+      code: 403
+    });
+  }
   try {
     const { roleId, permissionId } = req.params;
     console.log(`Revoke permission ${permissionId} from role ${roleId}`);

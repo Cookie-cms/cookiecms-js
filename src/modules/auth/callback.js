@@ -4,23 +4,23 @@ import knex from '../../inc/knex.js';
 import logger from '../../logger.js';
 import { createResponse, addaudit } from '../../inc/common.js';
 import { validateData } from '../../middleware/validation.js';
+import { generateJwtToken } from '../../inc/jwtHelper.js';
+import createSession from '../../inc/createSession.js';
 
 import dotenv from 'dotenv';
+import refreshToken from './refreshtoken.js';
 
 dotenv.config();
 
-function generateToken(userId) {
-    return jwt.sign(
-        {
-            iss: process.env.NameSite,
-            sub: userId,
-            iat: Math.floor(Date.now() / 1000),
-            exp: Math.floor(Date.now() / 1000) + 3600,
-        },
-        process.env.SECURE_CODE,
-        { algorithm: 'HS256' }
-    );
+function getClientIP(req) {
+    return req.headers['x-forwarded-for'] || 
+           req.connection.remoteAddress || 
+           req.socket.remoteAddress ||
+           (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
+           '127.0.0.1';
 }
+
+
 
 async function linkDiscordToUser(userResponse, userId) {
     await knex('users')
@@ -33,18 +33,13 @@ async function linkDiscordToUser(userResponse, userId) {
 }
 
 async function registerUser(userResponse, req, res) {
-    const token = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '') : '';
+    const clientIP = getClientIP(req);
 
     try {
+        // Check if email exists in users table
+        
         let userIdFromToken = null;
-        if (token) {
-            try {
-                const decoded = jwt.verify(token, process.env.SECURE_CODE);
-                userIdFromToken = decoded.sub;
-            } catch (err) {
-                logger.warn("Invalid or expired JWT token");
-            }
-        }
+        
 
         const existingUser = await knex('users')
             .where('dsid', userResponse.id)
@@ -73,21 +68,29 @@ async function registerUser(userResponse, req, res) {
 
         if (userIdFromToken) {
             await linkDiscordToUser(userResponse, userIdFromToken);
-            return res.status(200).json(createResponse(false, 'Successfully connected Discord', "/home"));
+            return res.status(200).json(createResponse('Successfully connected Discord', "/home"));
         }
 
         if (existingUser) {
+            // Создаем сессию для существующего пользователя
+            const session = await createSession(existingUser.id, clientIP, 'web');
+            
             const userData = {
-                jwt: generateToken(existingUser.id),
+                jwt: generateJwtToken(existingUser.id, session.sessionId, process.env.SECURE_CODE),
+                refreshToken: session.refresh,
                 userid: userResponse.id,
                 username: userResponse.username,
                 avatar: userResponse.avatar,
                 conn_id: randomCode,
+                sessionType: 'web'
             };
-            return res.status(200).json(createResponse(false, 'Successfully logged in', "/home", userData));
+            
+            logger.info(`Discord OAuth session created for user ${existingUser.id}: sessionId=${session.sessionId}, ip=${clientIP}`);
+            
+            return res.status(200).json(createResponse('Successfully logged in', "/home", userData));
         }
 
-        return res.status(404).json(createResponse(true, 'User not found, do you want to create or link?', "/home", {
+        return res.status(404).json(createResponse('User not found, do you want to create or link?', "/home", {
             userid: userResponse.id,
             username: userResponse.username,
             avatar: userResponse.avatar,

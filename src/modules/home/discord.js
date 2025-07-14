@@ -1,11 +1,6 @@
 import knex from '../../inc/knex.js';
 import logger from '../../logger.js';
-import { isJwtExpiredOrBlacklisted } from '../../inc/jwtHelper.js';
 import { addaudit, verifyPassword, hashPassword } from '../../inc/common.js';
-import dotenv from 'dotenv';
-
-dotenv.config();
-const JWT_SECRET_KEY = process.env.SECURE_CODE;
 
 
 async function validatePassword(userId, password) {
@@ -27,26 +22,8 @@ async function validatePassword(userId, password) {
     }
 }
 async function removediscordconn(req, res) {
-    const token = req.headers['authorization']?.replace('Bearer ', '');
-
-    if (!token) {
-        return res.status(401).json({ 
-            error: true, 
-            msg: 'Invalid token' 
-        });
-    }
-
     try {
-        const status = await isJwtExpiredOrBlacklisted(token, JWT_SECRET_KEY);
-
-        if (!status.valid) {
-            return res.status(401).json({ 
-                error: true, 
-                msg: status.message 
-            });
-        }
-
-        const userId = status.data.sub;
+        const userId = req.user.sub;
         const { password } = req.body;
 
         if (!password) {

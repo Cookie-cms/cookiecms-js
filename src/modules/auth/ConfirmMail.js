@@ -16,7 +16,7 @@ async function ConfirmMail(req, res) {
     if (!validation.isValid) {
         return res.status(400).json({
             error: true,
-            msg: 'Validation failed',
+            msg: 'Invalid or expired token',
             details: validation.errors
         });
     }

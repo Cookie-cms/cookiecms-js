@@ -1,4 +1,6 @@
-import mysql from '../../inc/mysql.js';
+import knex from '../../inc/knex.js';
+
+
 
 async function checkExpiredRoles() {
     const now = new Date();
@@ -13,3 +15,26 @@ async function checkExpiredRoles() {
       logger.info(`Сброшены роли для пользователей: ${ids.join(", ")}`);
     }
   }
+
+
+async function createtask(job_name, action, target_id, scheduled_date, status = 'pending') {
+    const created_at = Math.floor(Date.now() / 1000); // Unix time в секундах
+    const updated_at = created_at;
+
+    try {
+        await knex('job_schedule').insert({
+            job_name,
+            action,
+            target_id,
+            scheduled_date,
+            status,
+            created_at,
+            updated_at
+        });
+        return { success: true, msg: 'Task created successfully' };
+    }
+    catch (error) {
+        console.error('Error creating task:', error);
+        return { success: false, msg: 'Failed to create task' };
+    }
+}
