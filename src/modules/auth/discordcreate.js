@@ -59,13 +59,28 @@ export async function discordcreate(req, res) {
             return res.status(404).json({ error: true, msg: 'Account cannot be connected' });
         }
 
+        // Проверяем, не занята ли уже почта другим пользователем
+        if (discord_link.mail) {
+            const existingUser = await knex('users')
+                .where('mail', discord_link.mail)
+                .first();
+
+            if (existingUser) {
+                return res.status(409).json({ 
+                    error: true, 
+                    msg: 'Email address is already registered with another account' 
+                });
+            }
+        }
+
         let userId;
         const clientIP = getClientIP(req);
 
         // Using a transaction for data consistency
         await knex.transaction(async (trx) => {
             const insertData = {
-                dsid: id
+                dsid: id,
+                permission_group_id: 1,  // Default permission group
             };
             
             if (discord_link.mail) {
@@ -85,20 +100,20 @@ export async function discordcreate(req, res) {
         logger.info('User ID:', userId);
         
         // Создаем сессию
-        const { sessionId, barrier } = await createSession(userId, clientIP, 'web');
+        const { sessionId, refresh } = await createSession(userId, clientIP, 'web');
         
         // Генерируем JWT токен с ID сессии
         const token = generateJwtToken(userId, sessionId, JWT_SECRET_KEY);
 
-        logger.info(`Discord registration session created for user ${userId}: sessionId=${sessionId}, ip=${clientIP}`);
-
+        // logger.info(`Discord registration session created for user ${userId}: sessionId=${sessionId}, ip=${clientIP}`);
+        console.log("Discord registration successful for user:", userId);
         return res.status(200).json({ 
             error: false, 
             msg: "Registration successful", 
-            url: "/home",  // Optional redirect URL
+            // urlYES I CONFIRM TO RESET: "/home",  // Optional redirect URL
             data: {
                 jwt: token,  // The JWT token for authenticated requests
-                refre: barrier,  // The session barrier token
+                refreshToken: refresh,  // The session refresh token
             }
         });
     } catch (err) {

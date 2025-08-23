@@ -81,6 +81,7 @@ export async function up(knex) {
     { name: 'admin.capes', category: 'admin'},
     { name: 'admin.audit', category: 'admin' },
     { name: 'admin.settings', category: 'admin' },
+    { name: 'admin.page', category: 'admin' },
     { name: 'admin.owner', category: 'admin' },
     
     // Discord роли
@@ -99,7 +100,7 @@ export async function up(knex) {
     0: ['page.userlist'],
     1: ['profile.changeusername', 'profile.changeskin', 'profile.changemail', 'profile.changepassword', 'profile.discord'],
     2: ['profile.changeskinHD'],
-    3: ['admin.users', 'admin.userskins', 'admin.useredit', 'admin.user', 'admin.mailsend', 'admin.capes', 'admin.audit', 'discord.1346586587693187093'],
+    3: ['admin.users', 'admin.userskins', 'admin.useredit', 'admin.user', 'admin.mailsend', 'admin.capes', 'admin.audit', 'discord.1346586587693187093', 'admin.page'],
     4: ['admin.settings'],
     5: ['admin.owner']
   };

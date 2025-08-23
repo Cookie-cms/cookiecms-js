@@ -1,6 +1,7 @@
 import knex from '../../inc/knex.js';
 import logger from '../../logger.js';
 import { validateData } from '../../middleware/validation.js';
+import { sendVerificationEmail } from '../../inc/mail_templates.js';
 
 import dotenv from 'dotenv';
 
@@ -55,6 +56,11 @@ async function resetPassword(req, res) {
             expire: timexp,
             action: action
         });
+
+        // Send verification email
+        if (process.env.ENV === "prod") {
+            await sendVerificationEmail(mail, user.id, randomCode, randomCode);
+        }
 
         return res.status(200).json({ error: false, msg: 'Code for resetting password sent.' });
     } catch (err) {

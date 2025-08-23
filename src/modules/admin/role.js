@@ -166,9 +166,12 @@ export async function createPermission(req, res) {
   }
   try {
     const { name, category, description } = req.body;
-    const [id] = await knex('permissions')
+    const idArr = await knex('permissions')
       .insert({ name, category, description })
       .returning('id');
+
+    const id = typeof idArr[0] === 'object' ? idArr[0].id : idArr[0];
+
     res.status(201).json({ id, message: 'Permission created successfully' });
   } catch (error) {
     console.error(error);

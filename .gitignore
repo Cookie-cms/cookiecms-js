@@ -13,8 +13,9 @@ uploads/*
 
 
 # Logs
+logs/*.info
+logs/.*.json
 logs/
-log/
 *.log
 npm-debug.log*
 yarn-debug.log*

@@ -1,9 +1,11 @@
 import nodemailer from 'nodemailer';
 import logger from '../logger.js';
+import { readFile } from 'fs/promises';
 
 import dotenv from 'dotenv';
 
 dotenv.config();
+
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: process.env.SMTP_PORT,
@@ -30,15 +32,18 @@ async function sendHtmlEmail({ to, subject, templatePath, variables }) {
         });
 
         // Send mail
-        await transporter.sendMail({
+        const info = await transporter.sendMail({
             from: {
-                name: 'Noreply', // Display name
+                name: 'Noreply',
                 address: process.env.SMTP_USERNAME
-            },            
+            },
             to,
             subject,
             html
         });
+
+        return { url: nodemailer.getTestMessageUrl(info) };
+
     } catch (error) {
         logger.error('Mail send error:', error);
         throw new Error('Failed to send email');

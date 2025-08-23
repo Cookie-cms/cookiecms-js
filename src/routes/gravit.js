@@ -17,8 +17,16 @@ import {
     gl_banHardware,
     gl_unbanHardware
 } from '../modules/service/GravitLauncher.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
+
+router.use((req, res, next) => {
+  console.log(`[DEBUG] ${req.method} ${req.originalUrl}`);
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  next();
+});
 
 router.post('/authorize', gl_authorize);
 router.get('/getbyusername', gl_getByUsername);

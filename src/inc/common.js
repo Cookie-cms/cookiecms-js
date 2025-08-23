@@ -53,65 +53,65 @@ export async function addaudit(iss, action, forId, oldValue = null, newValue = n
         logger.info('Audit entry added successfully');
 
         // Send audit webhook if enabled
-        // if (config.AuditSecret?.enabled) {
+        if (process.env.AuditSecret?.enabled) {
+
+            let description;
             
-        //     let description;
-            
-        //     switch (action) {
-        //         case 1:
-        //             description = `New user registered\nUser ID: ${forId}`;
-        //             break;
-        //         case 2:
-        //             description = `Password changed\nUser ID: ${forId}`;
-        //             break;
-        //         case 3:
-        //             description = `Email confirmed\nUser ID: ${forId}\nEmail: ${newValue}`;
-        //             break;
-        //         case 4:
-        //             description = `Registration completed\nUser ID: ${forId}`;
-        //             break;
-        //         case 5:
-        //             description = `Username updated\nUser ID: ${forId}\nOld: ${oldValue}\nNew: ${newValue}`;
-        //             break;
-        //         case 6:
-        //             description = `Password updated\nUser ID: ${forId}`;
-        //             break;
-        //         case 7:
-        //             description = `Email updated\nUser ID: ${forId}\nOld: ${oldValue}\nNew: ${newValue}`;
-        //             break;
-        //         case 8:
-        //             description = `Discord unlinked\nUser ID: ${forId}\nDiscord ID: ${oldValue}`;
-        //             break;
-        //         case 9:
-        //             description = `Discord linked\nUser ID: ${forId}\nDiscord ID: ${newValue}`;
-        //             break;
-        //         case 10:
-        //             description = `Admin updated user\nTarget User ID: ${forId}\nField: ${fieldChanged}\nOld: ${oldValue}\nNew: ${newValue}`;
-        //             break;
-        //         case 11:
-        //             description = `User role updated\nTarget User ID: ${forId}\nOld Role: ${oldValue}\nNew Role: ${newValue}`;
-        //             break;
-        //         default:
-        //             description = `Action: ${action}\nUser: ${iss}\nTarget: ${forId}\nField Changed: ${fieldChanged}\nOld Value: ${oldValue}\nNew Value: ${newValue}`;
-        //     }
+            switch (action) {
+                case 1:
+                    description = `New user registered\nUser ID: ${forId}`;
+                    break;
+                case 2:
+                    description = `Password changed\nUser ID: ${forId}`;
+                    break;
+                case 3:
+                    description = `Email confirmed\nUser ID: ${forId}\nEmail: ${newValue}`;
+                    break;
+                case 4:
+                    description = `Registration completed\nUser ID: ${forId}`;
+                    break;
+                case 5:
+                    description = `Username updated\nUser ID: ${forId}\nOld: ${oldValue}\nNew: ${newValue}`;
+                    break;
+                case 6:
+                    description = `Password updated\nUser ID: ${forId}`;
+                    break;
+                case 7:
+                    description = `Email updated\nUser ID: ${forId}\nOld: ${oldValue}\nNew: ${newValue}`;
+                    break;
+                case 8:
+                    description = `Discord unlinked\nUser ID: ${forId}\nDiscord ID: ${oldValue}`;
+                    break;
+                case 9:
+                    description = `Discord linked\nUser ID: ${forId}\nDiscord ID: ${newValue}`;
+                    break;
+                case 10:
+                    description = `Admin updated user\nTarget User ID: ${forId}\nField: ${fieldChanged}\nOld: ${oldValue}\nNew: ${newValue}`;
+                    break;
+                case 11:
+                    description = `User role updated\nTarget User ID: ${forId}\nOld Role: ${oldValue}\nNew Role: ${newValue}`;
+                    break;
+                default:
+                    description = `Action: ${action}\nUser: ${iss}\nTarget: ${forId}\nField Changed: ${fieldChanged}\nOld Value: ${oldValue}\nNew Value: ${newValue}`;
+            }
 
-        //     description += `\nTime: ${new Date(time * 1000).toLocaleString()}`;
+            description += `\nTime: ${new Date(time * 1000).toLocaleString()}`;
 
-        //     const embed = {
-        //         title: action,
-        //         description,
-        //         color: 11624960,
-        //         footer: {
-        //             text: "CookieCMS",
-        //             icon_url: "https://avatars.githubusercontent.com/u/152858724?s=200&v=4"
-        //         }
-        //     };
+            const embed = {
+                title: action,
+                description,
+                color: 11624960,
+                footer: {
+                    text: "CookieCMS",
+                    icon_url: "https://avatars.githubusercontent.com/u/152858724?s=200&v=4"
+                }
+            };
 
-        //     const data = { embeds: [embed] };
-        //     const auditUrl = `${config.AuditSecret.url}`;
-        //     await axios.post(auditUrl, data);
-        //     logger.info('Audit notification sent.');
-        // }
+            const data = { embeds: [embed] };
+            const auditUrl = `${process.env.AuditSecret.url}`;
+            await axios.post(auditUrl, data);
+            logger.info('Audit notification sent.');
+        }
     } catch (err) {
         logger.error('Error adding audit entry or sending notification:', err);
         throw err; // Re-throw to handle in calling function

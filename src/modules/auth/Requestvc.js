@@ -59,7 +59,9 @@ async function requestVerificationCode(req, res) {
                 action: action
             });
 
-        await sendVerificationEmail(validatedMail, user.id, randomCode, randomCode);
+        if (process.env.ENV === "prod") {
+            await sendVerificationEmail(validatedMail, user.id, randomCode, randomCode);
+        } 
 
         return res.status(200).json({ error: false, msg: 'New verification code generated successfully.' });
     } catch (err) {

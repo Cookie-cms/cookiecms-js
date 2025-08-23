@@ -8,7 +8,7 @@ import { format } from 'winston';
 // Загружаем переменные окружения из .env
 dotenv.config();
 
-const LOG_DIR = 'info';
+const LOG_DIR = 'logs';
 
 // Ensure info directory exists
 try {

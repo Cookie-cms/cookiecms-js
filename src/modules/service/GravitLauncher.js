@@ -3,7 +3,11 @@ import bcrypt from 'bcrypt';
 import knex from '../../inc/knex.js';
 import { getSkinData } from '../skins/gravitlauncher.js';
 import { verifyPassword } from '../../inc/common.js';
+import createSession from '../../inc/createSession.js';
+import { generateJwtToken } from '../../inc/jwtHelper.js';
 import crypto from 'crypto';
+
+
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret_key';
 const BEARER_TOKEN = process.env.BEARER_TOKEN || 'YOUR_BEARER_TOKEN';
@@ -65,14 +69,18 @@ export async function gl_authorize(req, res) {
   const valid = await verifyPassword(password, user.password);
   if (!valid) return res.status(401).json(gl_error('Invalid credentials'));
 
-  const accessToken = jwt.sign({ sub: user.id }, JWT_SECRET, { expiresIn: '1h' });
-  const refreshToken = crypto.randomBytes(32).toString('hex'); // Генерация случайного refresh token
+  // const accessToken = jwt.sign({ sub: user.id }, JWT_SECRET, { expiresIn: '1h' });
+  // const refreshToken = crypto.randomBytes(32).toString('hex'); // Генерация случайного refresh token
   const expire = 3600;
+  const session = await createSession(user.id, req.ip, 'launcher');
+
+  const accessToken = generateJwtToken(user, session.sessionId, JWT_SECRET);
+  const refreshToken = session.refresh;
 
   const userObj = await gl_makeUser(user);
 
   res.json({
-    id: String(user.id),
+    id: session.sessionId,
     accessToken,
     refreshToken,
     expire,
@@ -106,10 +114,20 @@ export async function gl_getByToken(req, res) {
   if (!accessToken) return res.status(400).json(gl_error('Missing accessToken'));
   try {
     const payload = jwt.verify(accessToken, JWT_SECRET);
-    const user = await knex('users').where({ id: payload.sub }).first();
+    // Найти сессию по accessToken
+    const sessionRow = await knex('sessions').where({ id: payload.sessionId }).first();
+    if (!sessionRow) return res.status(404).json(gl_error('Session not found'));
+    const user = await knex('users').where({ id: sessionRow.userid }).first();
     if (!user) return res.status(404).json(gl_error('User not found'));
-    const session = await gl_makeSession(user, accessToken, null, 3600);
-    res.json(session);
+    const userObj = await gl_makeUser(user);
+    res.json({
+      id: String(sessionRow.id),
+      userId: user.id,
+      accessToken,
+      refreshToken: sessionRow.refresh,
+      expire: 3600,
+      user: userObj
+    });
   } catch {
     res.status(401).json(gl_error('Invalid or expired token'));
   }
@@ -225,22 +243,23 @@ export async function gl_createHardware(req, res) {
                 banned: false
             })
             .returning('id');
-        deviceRow = await knex('devices').where({ id }).first();
+  deviceRow = await knex('devices').where({ id: Number(id) }).first();
     }
     res.status(201).json({ id: deviceRow.id, ...deviceRow });
 }
 
 // --- /gravit/connectuserhardware ---
 export async function gl_connectUserHardware(req, res) {
+    console.log(req.body);
     // Ожидается: { userSession, device } или { userId, deviceId }
     let userId, deviceId;
 
     if (req.body.userId && req.body.deviceId) {
-        userId = req.body.userId;
-        deviceId = req.body.deviceId;
-    } else if (req.body.userSession && req.body.device) {
-        userId = req.body.userSession.id || req.body.userSession.user?.id;
-        deviceId = req.body.device.id;
+        userId = Number(req.body.userId);
+        deviceId = Number(req.body.deviceId);
+    } else if (req.body.userSession && req.body.hardware) {
+        userId = Number(req.body.userSession.id || req.body.userSession.user?.id);
+        deviceId = Number(req.body.hardware.id);
     } else {
         return res.status(400).json({ error: true, msg: 'Missing userId or deviceId' });
     }
@@ -250,10 +269,9 @@ export async function gl_connectUserHardware(req, res) {
     }
 
     try {
-        await knex('users').where({ id: userId }).update({ hwidId: deviceId });
+        await knex('devices').where({ id: deviceId }).update({ userid: userId });
         res.status(201).json({ msg: 'Connected' });
     } catch (e) {
-        console.error('connectUserAndDevice error:', e);
         res.status(500).json({ error: true, msg: 'Failed to connect user and device' });
     }
 }
@@ -263,7 +281,7 @@ export async function gl_addPublicKey(req, res) {
     const { deviceId, publicKey } = req.body;
     if (!deviceId || !publicKey) return res.status(400).json({ error: true, msg: 'Missing deviceId or publicKey' });
 
-    await knex('devices').where({ id: deviceId }).update({ publickey: publicKey });
+    await knex('devices').where({ id: Number(deviceId) }).update({ publickey: publicKey });
     res.status(201).json({ msg: 'Public key added' });
 }
 
@@ -273,7 +291,7 @@ export async function gl_getHardwareById(req, res) {
     if (typeof id === 'object' && id !== null) id = id.id;
     if (!id) return res.status(400).json({ error: true, msg: 'Missing id' });
 
-    const device = await knex('devices').where({ id: Number(id) }).first();
+    const device = await knex('devices').where({ id: Number(id) }).first(); // already correct
     if (!device) return res.status(404).json({ error: true, msg: 'Device not found' });
 
     res.status(200).json({ id: device.id, ...device });
@@ -293,7 +311,7 @@ export async function gl_banHardware(req, res) {
     const { deviceId } = req.body;
     if (!deviceId) return res.status(400).json({ error: true, msg: 'Missing deviceId' });
 
-    await knex('devices').where({ id: deviceId }).update({ banned: true });
+    await knex('devices').where({ id: Number(deviceId) }).update({ banned: true });
     res.status(201).json({ msg: 'Device banned' });
 }
 
@@ -302,6 +320,6 @@ export async function gl_unbanHardware(req, res) {
     const { deviceId } = req.body;
     if (!deviceId) return res.status(400).json({ error: true, msg: 'Missing deviceId' });
 
-    await knex('devices').where({ id: deviceId }).update({ banned: false });
+    await knex('devices').where({ id: Number(deviceId) }).update({ banned: false });
     res.status(201).json({ msg: 'Device unbanned' });
 }

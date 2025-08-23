@@ -4,6 +4,7 @@ import { isJwtExpiredOrBlacklisted, generateJwtToken } from '../../../inc/jwtHel
 import { addaudit, createResponse } from '../../../inc/common.js';
 import logger from '../../../logger.js';
 import { updateDiscordInfo, insertDiscordInfo } from './discordinfo.js';
+import { sendVerificationEmail, sendWelcomeEmail } from '../../inc/mail_templates.js';
 
 import dotenv from 'dotenv';
 

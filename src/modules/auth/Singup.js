@@ -88,17 +88,17 @@ export async function signup(req, res) {
             
             await trx.commit();
             // Send verification and welcome emails
-            // await sendVerificationEmail(validatedMail, randomCode, randomCode);
-            
-            const logo = "";
             if (process.env.ENV === "prod") {
+                await sendVerificationEmail(mail, userId, randomCode, randomCode);
+                        
+                const logo = process.env.DOMAIN + "/public/logo.png";
+
                 await sendWelcomeEmail(mail, userId, logo);
             }
 
         });
 
         return res.status(200).json({ 
-            error: false, 
             msg: "Registration successful. Please check your mail to verify.", 
             url: "/signin" 
         });

@@ -57,15 +57,19 @@ export function up(knex) {
   // }),
 
     // Job Schedule
-    knex.schema.createTable('job_schedule', table => {
+    knex.schema.createTable('cron_tasks', table => {
       table.increments('id');
-      table.string('job_name', 255).notNullable();
-      table.string('action', 255).notNullable();
-      table.integer('target_id').notNullable();
-      table.bigInteger('scheduled_date').notNullable();
-      table.enum('status', ['pending', 'completed', 'cancelled']).defaultTo('pending');
-      table.bigInteger('created_at');
-      table.bigInteger('updated_at');
+      table.string('type', 255).notNullable();
+      table.integer('target').nullable();
+      table.text('update_value').nullable();
+      table.timestamp('run_at').notNullable();
+      table.enum('status', ['pending', 'processing', 'completed', 'failed']).defaultTo('pending');
+      table.text('error_message').nullable();
+      table.timestamp('created_at').defaultTo(knex.fn.now());
+      table.timestamp('updated_at').defaultTo(knex.fn.now());
+      
+      table.index('run_at');
+      table.index('status');
     }),
 
     // Skins Library

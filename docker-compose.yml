@@ -9,13 +9,13 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql/data
     networks:
       - cookiecms_net
 
   pgadmin:
     image: 'dpage/pgadmin4'
-    container_name: pgadmin
+    container_name: pgadmin_cc
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@cookiecms.com
       PGADMIN_DEFAULT_PASSWORD: cookiecms
@@ -41,7 +41,7 @@ services:
       
 
 volumes:
-  postgres_data:
+    db_data:
 
 networks:
   cookiecms_net:

@@ -7,7 +7,7 @@ export function up(knex) {
 
     knex.schema.createTable('devices', table => {
     table.bigIncrements('id').primary(); // исправлено!
-    table.integer('userid').unsigned().notNullable();
+    table.integer('userid').unsigned();
     table.string('publickey'); // лучше хранить как строку, если не бинарь
     table.string('hwDiskId', 255);
     table.string('baseboardSerialNumber', 255);

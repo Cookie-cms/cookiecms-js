@@ -7,7 +7,7 @@ import logger from '../../logger.js';
 
 dotenv.config();
 
-const domain = process.env.DOMAIN;
+const domain = process.env.API_URL;
 
 function isValidUUID(uuid) {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -55,7 +55,7 @@ export async function getSkinData(userUuid) {
 
         const response = {
             SKIN: {
-                url: `${domain}/skins/${selectedSkin.uuid}.png`,
+                url: `${domain}/skin/public/${selectedSkin.uuid}`,
                 digest: skinHash
             }
         };

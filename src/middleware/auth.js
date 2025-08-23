@@ -114,16 +114,7 @@ export const requireAuth = async (req, res, next) => {
       });
     }
 
-        const token = authHeader.substring(7);
-    
-    // Проверяем черный список токенов
-    const isBlacklisted = await knex('blacklisted_jwts').where('jwt', token).first();
-    if (isBlacklisted) {
-      return res.status(401).json({ 
-        error: 'Unauthorized', 
-        message: 'Token has been revoked' 
-      });
-    }
+    const token = authHeader.substring(7);
 
     // Верифицируем и декодируем токен
     let decoded;
@@ -207,6 +198,107 @@ export const requireAuth = async (req, res, next) => {
     });
   }
 };
+
+
+/**
+ * Middleware для проверки аутентификации
+ */
+export const requireAuthGravit = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        error: 'Unauthorized', 
+        message: 'Missing or invalid authorization header' 
+      });
+    }
+
+    const token = authHeader.substring(7);
+
+    // Верифицируем и декодируем токен
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET_KEY);
+    }
+    catch (error) {
+      console.error('JWT verification error:', error);
+      if (error.name === 'TokenExpiredError') {
+        return res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Token has expired'
+        });
+      } else if (error.name === 'JsonWebTokenError') {
+        return res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Invalid token'
+        });
+      } else {
+        return res.status(500).json({
+          error: 'Internal Server Error',
+          message: 'Failed to verify token'
+        });
+      }
+    }
+    
+    // Получаем информацию о сессии из таблицы sessions
+    const session = await knex('sessions')
+      .where('id', decoded.sessionId)
+      .first();
+    if (!session) {
+      return res.status(401).json({ 
+        error: 'Unauthorized', 
+        message: 'Session not found' 
+      });
+    }
+    
+    const user = await knex('users')
+      .where('id', session.userid)
+      .first();
+      
+    if (!user) {
+      return res.status(401).json({ 
+        error: 'Unauthorized', 
+        message: 'User not found' 
+      });
+    }
+    
+    // Получаем разрешения и формируем объект пользователя
+    const permissions = await getAllUserPermissions(user.id);
+    req.user = {
+      userId: user.id,
+      username: user.username,
+      email: user.mail,
+      groupId: user.permission_group_id,
+      permissions,
+      sub: user.id // для обратной совместимости
+    };
+    
+    // Добавляем информацию о сессии
+    req.session = {
+      id: session.id,
+      type: session.type,
+    };
+
+    // console.log(session.type);
+    
+    next();
+  } catch (error) {
+    console.error('Auth middleware error:', error);
+    
+    const errorMessage = error.name === 'JsonWebTokenError' ? 'Invalid token' 
+                      : error.name === 'TokenExpiredError' ? 'Token expired'
+                      : 'Authentication failed';
+    
+    const statusCode = error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError' ? 401 : 500;
+    
+    return res.status(statusCode).json({ 
+      error: statusCode === 401 ? 'Unauthorized' : 'Internal Server Error', 
+      message: errorMessage 
+    });
+  }
+};
+
 
 /**
  * Middleware для проверки разрешений
